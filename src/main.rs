@@ -1,28 +1,74 @@
 extern crate cursive;
 
 use cursive::Cursive;
-use cursive::views::{Button, Dialog, DummyView,
-                     LinearLayout, TextView};
+use cursive::views::{Button, Dialog, LinearLayout, TextView};
 
 fn main() {
-    let mut siv = Cursive::default();
+    fn display_solo(siv: &mut Cursive, is_first: bool) {
+        let mut buttons = LinearLayout::vertical();
 
-    let mut buttons = LinearLayout::vertical();
+        for i in 0..19 {
+            let mut h = LinearLayout::horizontal();
 
-    for i in 0..19 {
-        let mut h = LinearLayout::horizontal();
-
-        for j in 0..19 {
-            h = h.child(TextView::new("# "))
+            for j in 0..19 {
+                h = h.child(TextView::new("0 "))
+            }
+            buttons = buttons.child(h);
         }
-        buttons = buttons.child(h);
+
+        siv.add_layer(Dialog::around(LinearLayout::horizontal()
+            .child(buttons)
+            .child(Button::new("Back", |s| { s.pop_layer(); })))
+            .title("Gommoku"));
     }
 
-    siv.add_layer(Dialog::around(LinearLayout::horizontal()
-        .child(buttons)
-        .child(DummyView)
-        .child(Button::new("Quit", Cursive::quit)))
-        .title("Gommoku"));
+    fn display_multi(siv: &mut Cursive) {
+        let mut buttons = LinearLayout::vertical();
 
+        for i in 0..19 {
+            let mut h = LinearLayout::horizontal();
+
+            for j in 0..19 {
+                h = h.child(TextView::new("0 "))
+            }
+            buttons = buttons.child(h);
+        }
+
+        siv.add_layer(Dialog::around(LinearLayout::horizontal()
+            .child(buttons)
+            .child(Button::new("Back", |s| { s.pop_layer(); })))
+            .title("Gommoku"));
+    }
+
+    fn display_turn_choice(siv: &mut Cursive) {
+        siv.add_layer(
+            Dialog::new()
+                .title("Player Turn")
+                .padding((2, 2, 1, 1))
+                .content(
+                    LinearLayout::vertical()
+                        .child(Button::new_raw(" First (black) ", |s| display_solo(s, true)))
+                        .child(Button::new_raw(" Second (white) ", |s| display_solo(s, false)))
+                        .child(Button::new_raw("    Back     ", |s| { s.pop_layer(); })),
+                ),
+        );
+    }
+
+    fn display_home(siv: &mut Cursive) {
+        siv.add_layer(
+            Dialog::new()
+                .title("Gomoku")
+                .padding((2, 2, 1, 1))
+                .content(
+                    LinearLayout::vertical()
+                        .child(Button::new_raw(" Multiplayer ", display_multi))
+                        .child(Button::new_raw("    Solo    ", display_turn_choice))
+                        .child(Button::new_raw("    Exit     ", |s| s.quit())),
+                ),
+        );
+    }
+
+    let mut siv = Cursive::default();
+    display_home(&mut siv);
     siv.run();
 }
