@@ -1,0 +1,7 @@
+[package]
+name = "gomoku-rs"
+version = "0.1.0"
+authors = ["cepalle"]
+edition = "2018"
+
+[dependencies]
