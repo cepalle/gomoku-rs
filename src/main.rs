@@ -18,7 +18,7 @@ fn main() {
 
         siv.add_layer(Dialog::around(LinearLayout::horizontal()
             .child(buttons)
-            .child(Button::new("Back", |s| { s.pop_layer(); })))
+            .child(Button::new("Quit game", |s| { s.pop_layer(); })))
             .title("Gommoku"));
     }
 
