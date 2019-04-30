@@ -10,6 +10,7 @@ use cursive::direction::Direction;
 const GRID_SIZE: usize = 19;
 const NB_CELL: usize = GRID_SIZE * GRID_SIZE;
 const LEN_CELL: usize = 3;
+const ALL_DIR: [(i8, i8); 8] = [(0, 1), (0, -1), (1, 0), (-1, 0), (1, 1), (-1, -1), (1, -1), (-1, 1)];
 
 #[derive(Clone, Copy)]
 enum Player {
@@ -30,18 +31,12 @@ enum GameMode {
     Multi,
 }
 
-#[derive(Clone, Copy)]
-struct Coord {
-    x: i8,
-    y: i8,
-}
-
 struct GameView {
     go_grid: [Cell; NB_CELL],
     game_mode: GameMode,
     player_turn: Player,
     ia_time: f32,
-    cursor_suggestion: Option<Coord>,
+    cursor_suggestion: Option<XY<i8>>,
     nb_cap_white: i8,
     nb_cap_black: i8,
     nb_turn: i32,
@@ -55,6 +50,8 @@ fn valide_pos(grd: &[Cell; NB_CELL]) -> [bool; NB_CELL] {
     }
     return todo;
 }
+
+fn delcap(grd: &mut [Cell; NB_CELL], p: XY<usize>, player: Player) -> i8 {2}
 
 impl GameView {
     pub fn new(game_mode: GameMode) -> Self {
@@ -78,11 +75,13 @@ impl GameView {
             return;
         }
 
-
         self.go_grid[index] = match self.player_turn {
             Player::Black => Cell::White,
             Player::White => Cell::Black,
         };
+
+        let cap = delcap(&mut self.go_grid, p, self.player_turn);
+
 
         self.player_turn = match self.player_turn {
             Player::Black => Player::White,
