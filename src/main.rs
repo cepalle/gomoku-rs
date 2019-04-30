@@ -10,9 +10,19 @@ use cursive::direction::Direction;
 const GRID_SIZE: usize = 19;
 const NB_CELL: usize = GRID_SIZE * GRID_SIZE;
 const LEN_CELL: usize = 3;
-const ALL_DIR: [(i8, i8); 8] = [(0, 1), (0, -1), (1, 0), (-1, 0), (1, 1), (-1, -1), (1, -1), (-1, 1)];
+const NB_DIR: usize = 8;
+const ALL_DIR: [(i8, i8); NB_DIR] = [
+    (0, 1),
+    (0, -1),
+    (1, 0),
+    (-1, 0),
+    (1, 1),
+    (-1, -1),
+    (1, -1),
+    (-1, 1)
+];
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 enum Player {
     White,
     Black,
@@ -37,9 +47,31 @@ struct GameView {
     player_turn: Player,
     ia_time: f32,
     cursor_suggestion: Option<XY<i8>>,
-    nb_cap_white: i8,
-    nb_cap_black: i8,
-    nb_turn: i32,
+    nb_cap_white: u8,
+    nb_cap_black: u8,
+    nb_turn: u8,
+}
+
+fn next_player(player: Player) -> Player {
+    match player {
+        Player::Black => Player::White,
+        Player::White => Player::Black,
+    }
+}
+
+fn cell_of_player(player: Player) -> Cell {
+    match player {
+        Player::Black => Cell::Black,
+        Player::White => Cell::White,
+    }
+}
+
+fn check_pos(grd: &mut [Cell; NB_CELL], p: XY<i8>, c: Cell) -> bool {
+    p.x >= 0 && (p.x as usize) < GRID_SIZE && p.y >= 0 && (p.y as usize) < GRID_SIZE && grd[xy_to_index(p)] == c
+}
+
+fn xy_to_index(p: XY<i8>) -> usize {
+    (p.x as usize) + (p.y as usize) * GRID_SIZE
 }
 
 fn valide_pos(grd: &[Cell; NB_CELL]) -> [bool; NB_CELL] {
@@ -51,7 +83,31 @@ fn valide_pos(grd: &[Cell; NB_CELL]) -> [bool; NB_CELL] {
     return todo;
 }
 
-fn delcap(grd: &mut [Cell; NB_CELL], p: XY<usize>, player: Player) -> i8 {2}
+fn delcap(grd: &mut [Cell; NB_CELL], p: XY<i8>, player: Player) -> u8 {
+    let mut nb_del: u8 = 0;
+
+    for i in 0..NB_DIR {
+        let (dx, dy) = ALL_DIR[i];
+
+        let xy1: XY<i8> = XY { x: p.x + dx, y: p.y + dy };
+        let xy2: XY<i8> = XY { x: p.x + dx * 2, y: p.y + dy * 2 };
+        let xy3: XY<i8> = XY { x: p.x + dx * 3, y: p.y + dy * 3 };
+
+        if !check_pos(grd, xy1, cell_of_player(player)) {
+            continue;
+        }
+        if !check_pos(grd, xy2, cell_of_player(player)) {
+            continue;
+        }
+        if !check_pos(grd, xy3, cell_of_player(player)) {
+            continue;
+        }
+        grd[xy_to_index(xy1)] = Cell::Empty;
+        grd[xy_to_index(xy2)] = Cell::Empty;
+        nb_del = nb_del + 2;
+    }
+    nb_del
+}
 
 impl GameView {
     pub fn new(game_mode: GameMode) -> Self {
@@ -67,8 +123,8 @@ impl GameView {
         }
     }
 
-    pub fn handle_mouse(&mut self, p: XY<usize>) {
-        let index = p.y * GRID_SIZE + p.x;
+    pub fn handle_mouse(&mut self, p: XY<i8>) {
+        let index = xy_to_index(p);
 
         let valid = valide_pos(&self.go_grid);
         if !valid[index] {
@@ -82,11 +138,13 @@ impl GameView {
 
         let cap = delcap(&mut self.go_grid, p, self.player_turn);
 
+        if self.player_turn == Player::Black {
+            self.nb_cap_black = self.nb_cap_black + cap;
+        } else {
+            self.nb_cap_white = self.nb_cap_white + cap;
+        }
 
-        self.player_turn = match self.player_turn {
-            Player::Black => Player::White,
-            Player::White => Player::Black,
-        };
+        self.player_turn = next_player(self.player_turn);
     }
 }
 
@@ -138,7 +196,7 @@ impl cursive::view::View for GameView {
 
                 if let Some(p) = pos {
                     if p.y >= 0 && p.y < GRID_SIZE && p.x >= 0 && p.x < GRID_SIZE {
-                        self.handle_mouse(p);
+                        self.handle_mouse(XY { x: p.x as i8, y: p.y as i8 });
                     }
                 }
             }
