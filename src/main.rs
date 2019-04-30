@@ -97,7 +97,17 @@ impl cursive::view::View for GameView {
                 offset,
                 position,
                 event: MouseEvent::Release(btn),
-            } => {}
+            } => {
+                let pos = position
+                    .checked_sub(offset)
+                    .map(|pos| pos.map_x(|x| x / 2));
+
+                if let Some(p) = pos {
+                    if p.y >= 0 && p.y < GRID_SIZE && p.x >= 0 && p.x <= GRID_SIZE * 2 {
+                        self.go_grid[p.y * GRID_SIZE + p.x] = Cell::Black;
+                    }
+                }
+            }
             _ => (),
         }
 
