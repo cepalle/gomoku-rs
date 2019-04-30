@@ -1,7 +1,15 @@
 extern crate cursive;
 
-use cursive::Cursive;
-use cursive::views::{Button, Dialog, LinearLayout, TextView};
+use cursive::{Cursive, Printer};
+use cursive::theme::{Color, ColorStyle, BaseColor};
+use cursive::views::{Button, Dialog, LinearLayout, TextView, Panel};
+use cursive::vec::Vec2;
+use cursive::event::{AnyCb, Event, EventResult, MouseEvent};
+use cursive::direction::Direction;
+
+const GRID_SIZE: usize = 19;
+const NB_CELL: usize = GRID_SIZE * GRID_SIZE;
+
 
 #[derive(Clone, Copy)]
 enum Player {
@@ -29,7 +37,7 @@ struct Coord {
 }
 
 struct GameView {
-    go_grid: [Cell; 19 * 19],
+    go_grid: [Cell; NB_CELL],
     game_mode: GameMode,
     player_turn: Player,
     ia_time: f32,
@@ -42,7 +50,7 @@ struct GameView {
 impl GameView {
     pub fn new(game_mode: GameMode) -> Self {
         GameView {
-            go_grid: [Cell::EmptyCell; 19 * 19],
+            go_grid: [Cell::Empty; NB_CELL],
             game_mode,
             player_turn: Player::Black,
             ia_time: 0.0,
@@ -56,41 +64,31 @@ impl GameView {
 
 impl cursive::view::View for GameView {
     fn draw(&self, printer: &Printer) {
-        for (i, cell) in self.overlay.iter().enumerate() {
-            let x = (i % self.board.size.x) * 2;
-            let y = i / self.board.size.x;
+        for (i, cell) in self.go_grid.iter().enumerate() {
+            let xp = (i % GRID_SIZE) * 2;
+            let yp = i / GRID_SIZE;
 
             let text = match *cell {
-                Cell::Unknown => "[]",
-                Cell::Flag => "()",
-                Cell::Visible(n) => {
-                    ["  ", " 1", " 2", " 3", " 4", " 5", " 6", " 7", " 8"][n]
-                }
+                Cell::Empty => "<>",
+                Cell::White => "()",
+                Cell::Black => "{}",
             };
 
             let color = match *cell {
-                Cell::Unknown => Color::RgbLowRes(3, 3, 3),
-                Cell::Flag => Color::RgbLowRes(4, 4, 2),
-                Cell::Visible(1) => Color::RgbLowRes(3, 5, 3),
-                Cell::Visible(2) => Color::RgbLowRes(5, 5, 3),
-                Cell::Visible(3) => Color::RgbLowRes(5, 4, 3),
-                Cell::Visible(4) => Color::RgbLowRes(5, 3, 3),
-                Cell::Visible(5) => Color::RgbLowRes(5, 2, 2),
-                Cell::Visible(6) => Color::RgbLowRes(5, 0, 1),
-                Cell::Visible(7) => Color::RgbLowRes(5, 0, 2),
-                Cell::Visible(8) => Color::RgbLowRes(5, 0, 3),
-                _ => Color::Dark(BaseColor::White),
+                Cell::Empty => Color::RgbLowRes(2, 2, 2),
+                Cell::White => Color::RgbLowRes(5, 5, 5),
+                Cell::Black => Color::RgbLowRes(0, 0, 0),
             };
 
             printer.with_color(
                 ColorStyle::new(Color::Dark(BaseColor::Black), color),
-                |printer| printer.print((x, y), text),
+                |printer| printer.print((xp, yp), text),
             );
         }
     }
 
-    fn take_focus(&mut self, _: Direction) -> bool {
-        true
+    fn required_size(&mut self, _: Vec2) -> Vec2 {
+        Vec2::new(GRID_SIZE * 2, GRID_SIZE)
     }
 
     fn on_event(&mut self, event: Event) -> EventResult {
@@ -98,66 +96,31 @@ impl cursive::view::View for GameView {
             Event::Mouse {
                 offset,
                 position,
-                event: MouseEvent::Press(_btn),
-            } => {
-                // Get cell for position
-                if let Some(pos) = self.get_cell(position, offset) {
-                    self.focused = Some(pos);
-                    return EventResult::Consumed(None);
-                }
-            }
-            Event::Mouse {
-                offset,
-                position,
                 event: MouseEvent::Release(btn),
-            } => {
-                // Get cell for position
-                if let Some(pos) = self.get_cell(position, offset) {
-                    if self.focused == Some(pos) {
-                        // We got a click here!
-                        match btn {
-                            MouseButton::Left => return self.reveal(pos),
-                            MouseButton::Right => {
-                                self.flag(pos);
-                                return EventResult::Consumed(None);
-                            }
-                            MouseButton::Middle => {
-                                return self.auto_reveal(pos);
-                            }
-                            _ => (),
-                        }
-                    }
-
-                    self.focused = None;
-                }
-            }
+            } => {}
             _ => (),
         }
 
         EventResult::Ignored
     }
 
-    fn required_size(&mut self, _: Vec2) -> Vec2 {
-        self.board.size.map_x(|x| 2 * x)
+    fn take_focus(&mut self, _: Direction) -> bool {
+        true
     }
 }
 
-fn display_game(siv: &mut Cursive, is_first: Option<bool>) {
-    let mut buttons = LinearLayout::vertical();
-
-    for i in 0..19 {
-        let mut h = LinearLayout::horizontal();
-
-        for j in 0..19 {
-            h = h.child(TextView::new("0 "))
-        }
-        buttons = buttons.child(h);
-    }
-
-    siv.add_layer(Dialog::around(LinearLayout::horizontal()
-        .child(buttons)
-        .child(Button::new("Quit game", |s| { s.pop_layer(); })))
-        .title("Gommoku"));
+fn display_game(siv: &mut Cursive, game_mode: GameMode) {
+    siv.add_layer(
+        Dialog::new()
+            .title("Minesweeper")
+            .content(
+                LinearLayout::horizontal()
+                    .child(Panel::new(GameView::new(game_mode))),
+            )
+            .button("Quit game", |s| {
+                s.pop_layer();
+            }),
+    );
 }
 
 fn display_turn_choice(siv: &mut Cursive) {
@@ -167,8 +130,8 @@ fn display_turn_choice(siv: &mut Cursive) {
             .padding((2, 2, 1, 1))
             .content(
                 LinearLayout::vertical()
-                    .child(Button::new_raw(" First (black) ", |s| display_game(s, Some(true))))
-                    .child(Button::new_raw(" Second (white) ", |s| display_game(s, Some(false))))
+                    .child(Button::new_raw(" First (black) ", |s| display_game(s, GameMode::Solo(Player::Black))))
+                    .child(Button::new_raw(" Second (white) ", |s| display_game(s, GameMode::Solo(Player::White))))
                     .child(Button::new_raw("    Back     ", |s| { s.pop_layer(); })),
             ),
     );
@@ -181,7 +144,7 @@ fn display_home(siv: &mut Cursive) {
             .padding((2, 2, 1, 1))
             .content(
                 LinearLayout::vertical()
-                    .child(Button::new_raw(" Multiplayer ", |s| display_game(s, None)))
+                    .child(Button::new_raw(" Multiplayer ", |s| display_game(s, GameMode::Multi)))
                     .child(Button::new_raw("    Solo    ", display_turn_choice))
                     .child(Button::new_raw("    Exit     ", |s| s.quit())),
             ),
