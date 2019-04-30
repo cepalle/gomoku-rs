@@ -131,10 +131,7 @@ impl GameView {
             return;
         }
 
-        self.go_grid[index] = match self.player_turn {
-            Player::Black => Cell::White,
-            Player::White => Cell::Black,
-        };
+        self.go_grid[index] = cell_of_player(self.player_turn);
 
         let cap = delcap(&mut self.go_grid, p, self.player_turn);
 
@@ -195,7 +192,7 @@ impl cursive::view::View for GameView {
                     .map(|pos| pos.map_x(|x| x / LEN_CELL));
 
                 if let Some(p) = pos {
-                    if p.y >= 0 && p.y < GRID_SIZE && p.x >= 0 && p.x < GRID_SIZE {
+                    if p.y < GRID_SIZE && p.x < GRID_SIZE {
                         self.handle_mouse(XY { x: p.x as i8, y: p.y as i8 });
                     }
                 }
