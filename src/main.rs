@@ -1,6 +1,6 @@
 extern crate cursive;
 
-use cursive::{Cursive, Printer};
+use cursive::{Cursive, Printer, XY};
 use cursive::theme::{Color, ColorStyle, BaseColor};
 use cursive::views::{Button, Dialog, LinearLayout, TextView, Panel};
 use cursive::vec::Vec2;
@@ -60,6 +60,18 @@ impl GameView {
             nb_turn: 2,
         }
     }
+
+    pub fn handle_mouse(&mut self, p: XY<usize>) {
+        self.go_grid[p.y * GRID_SIZE + p.x] = match self.player_turn {
+            Player::Black => Cell::White,
+            Player::White => Cell::Black,
+        };
+
+        self.player_turn = match self.player_turn {
+            Player::Black => Player::White,
+            Player::White => Player::Black,
+        }
+    }
 }
 
 impl cursive::view::View for GameView {
@@ -69,14 +81,14 @@ impl cursive::view::View for GameView {
             let yp = i / GRID_SIZE;
 
             let text = match *cell {
-                Cell::Empty => "<>",
+                Cell::Empty => "[]",
                 Cell::White => "()",
                 Cell::Black => "{}",
             };
 
             let color = match *cell {
                 Cell::Empty => Color::RgbLowRes(2, 2, 2),
-                Cell::White => Color::RgbLowRes(5, 5, 5),
+                Cell::White => Color::RgbLowRes(4, 4, 4),
                 Cell::Black => Color::RgbLowRes(0, 0, 0),
             };
 
@@ -104,7 +116,7 @@ impl cursive::view::View for GameView {
 
                 if let Some(p) = pos {
                     if p.y >= 0 && p.y < GRID_SIZE && p.x >= 0 && p.x <= GRID_SIZE * 2 {
-                        self.go_grid[p.y * GRID_SIZE + p.x] = Cell::Black;
+                        self.handle_mouse(p);
                     }
                 }
             }
@@ -122,7 +134,7 @@ impl cursive::view::View for GameView {
 fn display_game(siv: &mut Cursive, game_mode: GameMode) {
     siv.add_layer(
         Dialog::new()
-            .title("Minesweeper")
+            .title("Gomoku")
             .content(
                 LinearLayout::horizontal()
                     .child(Panel::new(GameView::new(game_mode))),
@@ -142,7 +154,7 @@ fn display_turn_choice(siv: &mut Cursive) {
                 LinearLayout::vertical()
                     .child(Button::new_raw(" First (black) ", |s| display_game(s, GameMode::Solo(Player::Black))))
                     .child(Button::new_raw(" Second (white) ", |s| display_game(s, GameMode::Solo(Player::White))))
-                    .child(Button::new_raw("    Back     ", |s| { s.pop_layer(); })),
+                    .child(Button::new_raw("     Back      ", |s| { s.pop_layer(); })),
             ),
     );
 }
