@@ -9,7 +9,7 @@ use cursive::direction::Direction;
 
 const GRID_SIZE: usize = 19;
 const NB_CELL: usize = GRID_SIZE * GRID_SIZE;
-
+const LEN_CELL: usize = 3;
 
 #[derive(Clone, Copy)]
 enum Player {
@@ -17,7 +17,7 @@ enum Player {
     Black,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 enum Cell {
     Black,
     White,
@@ -47,6 +47,15 @@ struct GameView {
     nb_turn: i32,
 }
 
+fn valide_pos(grd: &[Cell; NB_CELL]) -> [bool; NB_CELL] {
+    let mut todo: [bool; NB_CELL] = [true; NB_CELL];
+
+    for i in 0..NB_CELL {
+        todo[i] = (grd[i] == Cell::Empty);
+    }
+    return todo;
+}
+
 impl GameView {
     pub fn new(game_mode: GameMode) -> Self {
         GameView {
@@ -62,7 +71,15 @@ impl GameView {
     }
 
     pub fn handle_mouse(&mut self, p: XY<usize>) {
-        self.go_grid[p.y * GRID_SIZE + p.x] = match self.player_turn {
+        let index = p.y * GRID_SIZE + p.x;
+
+        let valid = valide_pos(&self.go_grid);
+        if !valid[index] {
+            return;
+        }
+
+
+        self.go_grid[index] = match self.player_turn {
             Player::Black => Cell::White,
             Player::White => Cell::Black,
         };
@@ -70,37 +87,43 @@ impl GameView {
         self.player_turn = match self.player_turn {
             Player::Black => Player::White,
             Player::White => Player::Black,
-        }
+        };
     }
 }
 
 impl cursive::view::View for GameView {
     fn draw(&self, printer: &Printer) {
         for (i, cell) in self.go_grid.iter().enumerate() {
-            let xp = (i % GRID_SIZE) * 2;
+            let xp = (i % GRID_SIZE) * LEN_CELL;
             let yp = i / GRID_SIZE;
 
             let text = match *cell {
-                Cell::Empty => "[]",
-                Cell::White => "()",
-                Cell::Black => "{}",
+                Cell::Empty => " o ",
+                Cell::White => "   ",
+                Cell::Black => "   ",
             };
 
-            let color = match *cell {
-                Cell::Empty => Color::RgbLowRes(2, 2, 2),
-                Cell::White => Color::RgbLowRes(4, 4, 4),
+            let color_back = match *cell {
+                Cell::Empty => Color::Rgb(200, 200, 200),
+                Cell::White => Color::RgbLowRes(5, 5, 5),
                 Cell::Black => Color::RgbLowRes(0, 0, 0),
             };
 
+            let color_font = match *cell {
+                Cell::Empty => Color::RgbLowRes(0, 0, 0),
+                Cell::White => Color::RgbLowRes(0, 0, 0),
+                Cell::Black => Color::RgbLowRes(5, 5, 5),
+            };
+
             printer.with_color(
-                ColorStyle::new(Color::Dark(BaseColor::Black), color),
+                ColorStyle::new(color_font, color_back),
                 |printer| printer.print((xp, yp), text),
             );
         }
     }
 
     fn required_size(&mut self, _: Vec2) -> Vec2 {
-        Vec2::new(GRID_SIZE * 2, GRID_SIZE)
+        Vec2::new(GRID_SIZE * LEN_CELL, GRID_SIZE)
     }
 
     fn on_event(&mut self, event: Event) -> EventResult {
@@ -112,10 +135,10 @@ impl cursive::view::View for GameView {
             } => {
                 let pos = position
                     .checked_sub(offset)
-                    .map(|pos| pos.map_x(|x| x / 2));
+                    .map(|pos| pos.map_x(|x| x / LEN_CELL));
 
                 if let Some(p) = pos {
-                    if p.y >= 0 && p.y < GRID_SIZE && p.x >= 0 && p.x <= GRID_SIZE * 2 {
+                    if p.y >= 0 && p.y < GRID_SIZE && p.x >= 0 && p.x < GRID_SIZE {
                         self.handle_mouse(p);
                     }
                 }
@@ -135,6 +158,7 @@ fn display_game(siv: &mut Cursive, game_mode: GameMode) {
     siv.add_layer(
         Dialog::new()
             .title("Gomoku")
+            .padding((6, 6, 2, 2))
             .content(
                 LinearLayout::horizontal()
                     .child(Panel::new(GameView::new(game_mode))),
