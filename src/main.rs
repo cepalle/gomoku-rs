@@ -7,8 +7,6 @@ use cursive::vec::Vec2;
 use cursive::event::{Event, EventResult, MouseEvent};
 use cursive::direction::Direction;
 use std::time::SystemTime;
-use std::thread;
-use core::time;
 
 const GRID_SIZE: usize = 19;
 const NB_CELL: usize = GRID_SIZE * GRID_SIZE;
@@ -183,7 +181,7 @@ fn delcap(grd: &mut [Cell; NB_CELL], p: XY<i8>, player: Player) -> u8 {
 }
 
 fn check_align_5p(grd: &[Cell; NB_CELL], c: Cell) -> bool {
-    let mut nba = 0;
+    let mut nba: i32;
 
     for x in 0..GRID_SIZE {
         nba = 0;
@@ -199,7 +197,6 @@ fn check_align_5p(grd: &[Cell; NB_CELL], c: Cell) -> bool {
         }
     }
 
-    nba = 0;
     for x in 0..GRID_SIZE {
         nba = 0;
         for y in 0..GRID_SIZE {
@@ -214,7 +211,6 @@ fn check_align_5p(grd: &[Cell; NB_CELL], c: Cell) -> bool {
         }
     }
 
-    nba = 0;
     for x in 0..GRID_SIZE {
         nba = 0;
         for y in 0..GRID_SIZE {
@@ -229,7 +225,6 @@ fn check_align_5p(grd: &[Cell; NB_CELL], c: Cell) -> bool {
         }
     }
 
-    nba = 0;
     for x in 0..GRID_SIZE {
         nba = 0;
         for y in 0..GRID_SIZE {
@@ -244,7 +239,6 @@ fn check_align_5p(grd: &[Cell; NB_CELL], c: Cell) -> bool {
         }
     }
 
-    nba = 0;
     for x in 0..GRID_SIZE {
         nba = 0;
         for y in 0..GRID_SIZE {
@@ -259,7 +253,6 @@ fn check_align_5p(grd: &[Cell; NB_CELL], c: Cell) -> bool {
         }
     }
 
-    nba = 0;
     for x in 0..GRID_SIZE {
         nba = 0;
         for y in 0..GRID_SIZE {
@@ -292,7 +285,7 @@ fn check_end_grd(
     let mut valid_next = valide_pos(grd);
     del_double_three(grd, &mut valid_next, cell_of_player(next_player(player)));
 
-    let mut cp_grp: [Cell; NB_CELL] = [Cell::Empty; NB_CELL];
+    let mut cp_grp: [Cell; NB_CELL];
     let nb_cap_next_player = match next_player(player) {
         Player::White => nb_cap_white,
         Player::Black => nb_cap_black,
@@ -325,7 +318,7 @@ fn check_end_grd(
 const DEPTH: u8 = 5;
 
 fn del_dist_1(v: &[bool; NB_CELL]) -> [bool; NB_CELL] {
-    let mut todo = [false; NB_CELL];
+    let mut todo: [bool; NB_CELL] = [false; NB_CELL];
 
     for i in 0..NB_CELL {
         let x = (i % GRID_SIZE) as i8;
@@ -362,22 +355,6 @@ fn valid_to_pos(v: &[bool; NB_CELL]) -> Vec<(i8, i8)> {
     todo
 }
 
-/*
-function negamax(node, depth, α, β, color) is
-    if depth = 0 or node is a terminal node then
-        return color × the heuristic value of node
-
-    childNodes := generateMoves(node)
-    childNodes := orderMoves(childNodes)
-    value := −∞
-    foreach child in childNodes do
-        value := max(value, −negamax(child, depth − 1, −β, −α, −color))
-        α := max(α, value)
-        if α ≥ β then
-            break (* cut-off *)
-    return value
-*/
-
 const SCORE_CAP: i32 = 200;
 const SCORE_ALIGN_1: i32 = 1;
 const SCORE_ALIGN_2: i32 = 10;
@@ -388,7 +365,7 @@ const SCORE_ALIGN_5: i32 = 100000;
 fn scoring_align(grd: &[Cell; NB_CELL], player: Player) -> i32 {
     let mut score: i32 = 0;
     let c = cell_of_player(player);
-    let mut nba = 0;
+    let mut nba: i32;
 
     fn nba_to_score(nba: i32) -> i32 {
         match nba {
@@ -413,7 +390,6 @@ fn scoring_align(grd: &[Cell; NB_CELL], player: Player) -> i32 {
         }
     }
 
-    nba = 0;
     for x in 0..GRID_SIZE {
         nba = 0;
         for y in 0..GRID_SIZE {
@@ -426,7 +402,6 @@ fn scoring_align(grd: &[Cell; NB_CELL], player: Player) -> i32 {
         }
     }
 
-    nba = 0;
     for x in 0..GRID_SIZE {
         nba = 0;
         for y in 0..GRID_SIZE {
@@ -439,7 +414,6 @@ fn scoring_align(grd: &[Cell; NB_CELL], player: Player) -> i32 {
         }
     }
 
-    nba = 0;
     for x in 0..GRID_SIZE {
         nba = 0;
         for y in 0..GRID_SIZE {
@@ -452,7 +426,6 @@ fn scoring_align(grd: &[Cell; NB_CELL], player: Player) -> i32 {
         }
     }
 
-    nba = 0;
     for x in 0..GRID_SIZE {
         nba = 0;
         for y in 0..GRID_SIZE {
@@ -465,7 +438,6 @@ fn scoring_align(grd: &[Cell; NB_CELL], player: Player) -> i32 {
         }
     }
 
-    nba = 0;
     for x in 0..GRID_SIZE {
         nba = 0;
         for y in 0..GRID_SIZE {
@@ -496,7 +468,21 @@ fn scoring_end(
 
     score
 }
+/*
+function negamax(node, depth, α, β, color) is
+    if depth = 0 or node is a terminal node then
+        return color × the heuristic value of node
 
+    childNodes := generateMoves(node)
+    childNodes := orderMoves(childNodes)
+    value := −∞
+    foreach child in childNodes do
+        value := max(value, −negamax(child, depth − 1, −β, −α, −color))
+        α := max(α, value)
+        if α ≥ β then
+            break (* cut-off *)
+    return value
+*/
 fn nega_max(
     grd: &[Cell; NB_CELL],
     nb_cap_white: u8,
@@ -508,7 +494,7 @@ fn nega_max(
 ) -> (XY<i8>, i32) {
     let mut alpha_mut = alpha;
     let mut to_find: (XY<i8>, i32) = (XY { x: 0, y: 0 }, std::i32::MIN / 2);
-    let mut cp: [Cell; NB_CELL] = [Cell::Empty; NB_CELL];
+    let mut cp: [Cell; NB_CELL];
 
     if nb_cap_black >= 10 {
         if player == Player::Black {
