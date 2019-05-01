@@ -94,7 +94,7 @@ fn cell_of_player(player: Player) -> Cell {
 }
 
 fn check_pos(grd: &[Cell; NB_CELL], p: XY<i16>, c: Cell) -> bool {
-    (p.x as usize) < GRID_SIZE && (p.y as usize) < GRID_SIZE && grd[xy_to_index(p)] == c
+    p.x >= 0 && (p.x as usize) < GRID_SIZE && p.y >= 0 && (p.y as usize) < GRID_SIZE && grd[xy_to_index(p)] == c
 }
 
 fn xy_to_index(p: XY<i16>) -> usize {
@@ -315,7 +315,7 @@ fn check_end_grd(
 
 // SOLVER
 
-const DEPTH: i16 = 4;
+const DEPTH: i16 = 2;
 
 fn del_dist_1(v: &[bool; NB_CELL]) -> [bool; NB_CELL] {
     let mut todo: [bool; NB_CELL] = [false; NB_CELL];
@@ -362,21 +362,21 @@ const SCORE_ALIGN_3: i32 = 100;
 const SCORE_ALIGN_4: i32 = 1000;
 const SCORE_ALIGN_5: i32 = 100000;
 
+fn nba_to_score(nba: i32) -> i32 {
+    match nba {
+        0 => 0,
+        1 => SCORE_ALIGN_1,
+        2 => SCORE_ALIGN_2,
+        3 => SCORE_ALIGN_3,
+        4 => SCORE_ALIGN_4,
+        _ => SCORE_ALIGN_5,
+    }
+}
+
 fn scoring_align(grd: &[Cell; NB_CELL], player: Player) -> i32 {
     let mut score: i32 = 0;
     let c = cell_of_player(player);
     let mut nba: i32;
-
-    fn nba_to_score(nba: i32) -> i32 {
-        match nba {
-            0 => 0,
-            1 => SCORE_ALIGN_1,
-            2 => SCORE_ALIGN_2,
-            3 => SCORE_ALIGN_3,
-            4 => SCORE_ALIGN_4,
-            _ => SCORE_ALIGN_5,
-        }
-    }
 
     for x in 0..GRID_SIZE {
         nba = 0;
@@ -453,6 +453,35 @@ fn scoring_align(grd: &[Cell; NB_CELL], player: Player) -> i32 {
     score
 }
 
+fn scoring_ordoring(grd: &[Cell; NB_CELL], player: Player, p: XY<i16>) -> i32 {
+    let XY { x, y } = p;
+    let mut score: i32 = 0;
+    let mut nba: i16 = 0;
+
+    for i in 0..NB_DIR {
+        let (dx, dy) = ALL_DIR[i];
+        nba = 0;
+
+        loop {
+            if !check_pos(grd, XY { x: x + dx * nba, y: y + dy * nba }, Cell::Black) {
+                break;
+            }
+            nba += 1;
+            score += nba_to_score(nba as i32);
+        }
+        nba = 0;
+        loop {
+            if !check_pos(grd, XY { x: x + dx * nba, y: y + dy * nba }, Cell::White) {
+                break;
+            }
+            nba += 1;
+            score += nba_to_score(nba as i32);
+        }
+    }
+
+    score
+}
+
 fn scoring_end(
     grd: &[Cell; NB_CELL],
     nb_cap_white: i16,
@@ -468,21 +497,7 @@ fn scoring_end(
 
     score
 }
-/*
-function negamax(node, depth, α, β, color) is
-    if depth = 0 or node is a terminal node then
-        return color × the heuristic value of node
 
-    childNodes := generateMoves(node)
-    childNodes := orderMoves(childNodes)
-    value := −∞
-    foreach child in childNodes do
-        value := max(value, −negamax(child, depth − 1, −β, −α, −color))
-        α := max(α, value)
-        if α ≥ β then
-            break (* cut-off *)
-    return value
-*/
 fn nega_max(
     grd: &[Cell; NB_CELL],
     nb_cap_white: i16,
@@ -518,7 +533,7 @@ fn nega_max(
         }
     }
 
-    if depth == 0 {
+    if depth <= 0 {
         return (XY { x: 0, y: 0 }, scoring_end(grd, nb_cap_white, nb_cap_black, player));
     }
 
@@ -527,9 +542,13 @@ fn nega_max(
     del_double_three(&grd, &mut valid, cell_of_player(player));
     let lpos = valid_to_pos(&valid);
 
-    // Ordoring
-
+    let mut lpos_score: Vec<(i32, i16, i16)> = Vec::new();
     for (x, y) in lpos.iter() {
+        lpos_score.push((scoring_ordoring(grd, player, XY { x: *x, y: *y }), *x, *y))
+    }
+    lpos_score.sort_by_key(|k| k.0);
+
+    for (_, x, y) in lpos_score.iter() {
         cp = *grd;
         cp[(*x as usize) + (*y as usize) * GRID_SIZE] = cell_of_player(player);
         let cap = delcap(&mut cp, XY { x: *x, y: *y }, player);
