@@ -315,9 +315,23 @@ fn check_end_grd(gv: &GameView) -> Option<Player> {
     Some(gv.player_turn)
 }
 
-fn solver(grd: &[Cell; NB_CELL], player: Player, nb_cap_white: u8, nb_cap_black: u8) -> XY<i8> {
-    XY { x: 0, y: 0 }
+// SOLVER
+
+const DEPTH: u8 = 6;
+
+fn nega_max(
+    grd: [Cell; NB_CELL],
+    nb_cap_white: u8,
+    nb_cap_black: u8,
+    depth: u8,
+    beta: i32,
+    alpha: i32,
+    player: Player,
+) -> (XY<i8>, i32) {
+    (XY { x: 0, y: 0 }, 0)
 }
+
+// SOLVER
 
 impl GameView {
     pub fn new(game_mode: GameMode) -> Self {
@@ -385,7 +399,15 @@ impl GameView {
 
         let now = SystemTime::now();
 
-        let xy_ia = solver(&self.go_grid, self.player_turn, self.nb_cap_white, self.nb_cap_black);
+        let (xy_ia, _) = nega_max(
+            self.go_grid,
+            self.nb_cap_white,
+            self.nb_cap_black,
+            DEPTH,
+            std::i32::MIN,
+            std::i32::MAX,
+            self.player_turn,
+        );
 
         match now.elapsed() {
             Ok(d) => self.ia_time = d.as_millis(),
