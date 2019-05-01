@@ -7,6 +7,8 @@ use cursive::vec::Vec2;
 use cursive::event::{Event, EventResult, MouseEvent};
 use cursive::direction::Direction;
 use std::time::SystemTime;
+use std::thread;
+use core::time;
 
 const GRID_SIZE: usize = 19;
 const NB_CELL: usize = GRID_SIZE * GRID_SIZE;
@@ -247,11 +249,12 @@ impl GameView {
             return;
         }
 
-        let start = SystemTime::now();
+        let now = SystemTime::now();
+
         // IA
-        let end = SystemTime::now();
-        let diff = start.duration_since(end);
-        match diff {
+        thread::sleep(time::Duration::from_millis(500));
+
+        match now.elapsed() {
             Ok(d) => self.ia_time = d.as_millis(),
             Err(_e) => (),
         }
@@ -314,7 +317,7 @@ impl cursive::view::View for GameView {
         print_tmp(printer, (0, 2), &format!("Turn: Player {}", player_to_str(self.player_turn))[..]);
         print_tmp(printer, (0, 3), &format!("Nb cap Black: {}", self.nb_cap_black)[..]);
         print_tmp(printer, (0, 4), &format!("Nb cap White: {}", self.nb_cap_white)[..]);
-        print_tmp(printer, (0, 6), &format!("Time IA: {}", self.ia_time)[..]);
+        print_tmp(printer, (0, 6), &format!("Time IA: {} ms", self.ia_time)[..]);
 
         if let Some(end) = self.end {
             match end {
