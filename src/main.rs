@@ -154,13 +154,13 @@ fn del_double_three(grd: &[Cell; NB_CELL], vld: &mut [bool; NB_CELL], c: Cell) {
                     }
                     b = b && check_pos(grd, XY { x: x + dx * co, y: y + dy * co }, cl);
                 }
-                dir_match[j] = b || dir_match[j];
+                dir_match[i] = b || dir_match[i];
             }
         }
 
         let mut nb_double = 0;
         for i in 0..4 {
-            if dir_match[i * 2] && dir_match[i * 2 + 1] {
+            if dir_match[i * 2] || dir_match[i * 2 + 1] {
                 nb_double += 1;
             }
         }
