@@ -277,20 +277,25 @@ fn check_align_5p(grd: &[Cell; NB_CELL], c: Cell) -> bool {
     false
 }
 
-fn check_end_grd(gv: &GameView) -> Option<Player> {
-    if check_align_5p(&gv.go_grid, cell_of_player(next_player(gv.player_turn))) {
-        return Some(next_player(gv.player_turn));
+fn check_end_grd(
+    grd: &[Cell; NB_CELL],
+    nb_cap_white: u8,
+    nb_cap_black: u8,
+    player: Player,
+) -> Option<Player> {
+    if check_align_5p(grd, cell_of_player(next_player(player))) {
+        return Some(next_player(player));
     }
-    if !check_align_5p(&gv.go_grid, cell_of_player(gv.player_turn)) {
+    if !check_align_5p(grd, cell_of_player(player)) {
         return None;
     }
-    let mut valid_next = valide_pos(&gv.go_grid);
-    del_double_three(&gv.go_grid, &mut valid_next, cell_of_player(next_player(gv.player_turn)));
+    let mut valid_next = valide_pos(grd);
+    del_double_three(grd, &mut valid_next, cell_of_player(next_player(player)));
 
     let mut cp_grp: [Cell; NB_CELL] = [Cell::Empty; NB_CELL];
-    let nb_cap_next_player = match next_player(gv.player_turn) {
-        Player::White => gv.nb_cap_white,
-        Player::Black => gv.nb_cap_black,
+    let nb_cap_next_player = match next_player(player) {
+        Player::White => nb_cap_white,
+        Player::Black => nb_cap_black,
     };
 
     for x in 0..GRID_SIZE {
@@ -298,21 +303,21 @@ fn check_end_grd(gv: &GameView) -> Option<Player> {
             if !valid_next[x + y * GRID_SIZE] {
                 continue;
             }
-            cp_grp = gv.go_grid;
-            let nb_del = delcap(&mut cp_grp, XY { x: x as i8, y: y as i8 }, next_player(gv.player_turn));
+            cp_grp = *grd;
+            let nb_del = delcap(&mut cp_grp, XY { x: x as i8, y: y as i8 }, next_player(player));
             if nb_del == 0 {
                 continue;
             }
             if nb_cap_next_player + nb_del >= 10 {
                 return None;
             }
-            if !check_align_5p(&cp_grp, cell_of_player(gv.player_turn)) {
+            if !check_align_5p(&cp_grp, cell_of_player(player)) {
                 return None;
             }
         }
     }
 
-    Some(gv.player_turn)
+    Some(player)
 }
 
 // SOLVER
@@ -373,7 +378,7 @@ function negamax(node, depth, α, β, color) is
     return value
 */
 fn nega_max(
-    grd: [Cell; NB_CELL],
+    grd: &[Cell; NB_CELL],
     nb_cap_white: u8,
     nb_cap_black: u8,
     depth: u8,
@@ -381,8 +386,34 @@ fn nega_max(
     alpha: i32,
     player: Player,
 ) -> (XY<i8>, i32) {
+    let mut alpha_mut = alpha;
+    let mut to_find: (XY<i8>, i32) = (XY { x: 0, y: 0 }, std::i32::MIN / 2);
+    let mut cp: [Cell; NB_CELL] = [Cell::Empty; NB_CELL];
+
+    if nb_cap_black >= 10 {
+        if player == Player::Black {
+            return (XY { x: 0, y: 0 }, std::i32::MAX / 2);
+        } else {
+            return (XY { x: 0, y: 0 }, std::i32::MIN / 2);
+        }
+    }
+    if nb_cap_white >= 10 {
+        if player == Player::White {
+            return (XY { x: 0, y: 0 }, std::i32::MAX / 2);
+        } else {
+            return (XY { x: 0, y: 0 }, std::i32::MIN / 2);
+        }
+    }
+    if let Some(p) = check_end_grd(grd, nb_cap_white, nb_cap_black, player) {
+        if p == player {
+            return (XY { x: 0, y: 0 }, std::i32::MAX / 2);
+        } else {
+            return (XY { x: 0, y: 0 }, std::i32::MIN / 2);
+        }
+    }
+
     if depth == 0 {
-        return (XY { x: 0, y: 0 }, 50);
+        return to_find;
     }
 
     let mut valid = valide_pos(&grd);
@@ -390,10 +421,30 @@ fn nega_max(
     del_double_three(&grd, &mut valid, cell_of_player(player));
     let lpos = valid_to_pos(&valid);
 
-    // ordoring
+    // Ordoring
 
-    let (x, y) = lpos[0];
-    let to_find = (XY { x, y }, 0);
+    for (x, y) in lpos.iter() {
+        cp = *grd;
+        cp[(*x as usize) + (*y as usize) * GRID_SIZE] = cell_of_player(player);
+        let cap = delcap(&mut cp, XY { x: *x, y: *y }, player);
+
+        let (_, s) = nega_max(
+            &cp,
+            if player == Player::White { nb_cap_white + cap } else { nb_cap_white },
+            if player == Player::Black { nb_cap_black + cap } else { nb_cap_black },
+            depth - 1,
+            -alpha_mut,
+            -beta,
+            next_player(player),
+        );
+        if s > to_find.1 {
+            to_find = (XY { x: *x, y: *y }, s);
+        }
+        alpha_mut = alpha_mut.max(s);
+        if alpha_mut >= beta {
+            break;
+        }
+    }
 
     to_find
 }
@@ -452,7 +503,7 @@ impl GameView {
             self.end = Some(Some(Player::White));
             return;
         }
-        if let Some(p) = check_end_grd(&self) {
+        if let Some(p) = check_end_grd(&self.go_grid, self.nb_cap_white, self.nb_cap_black, self.player_turn) {
             self.end = Some(Some(p));
             return;
         }
@@ -467,12 +518,12 @@ impl GameView {
         let now = SystemTime::now();
 
         let (xy_ia, _) = nega_max(
-            self.go_grid,
+            &self.go_grid,
             self.nb_cap_white,
             self.nb_cap_black,
             DEPTH,
-            std::i32::MIN,
-            std::i32::MAX,
+            std::i32::MIN / 2,
+            std::i32::MAX / 2,
             self.player_turn,
         );
 
@@ -498,7 +549,7 @@ impl GameView {
             self.end = Some(Some(Player::White));
             return;
         }
-        if let Some(p) = check_end_grd(&self) {
+        if let Some(p) = check_end_grd(&self.go_grid, self.nb_cap_white, self.nb_cap_black, self.player_turn) {
             self.end = Some(Some(p));
             return;
         }
