@@ -318,17 +318,38 @@ fn check_end_grd(gv: &GameView) -> Option<Player> {
 // SOLVER
 
 const DEPTH: u8 = 6;
+/*
+function negamax(node, depth, α, β, color) is
+    if depth = 0 or node is a terminal node then
+        return color × the heuristic value of node
 
+    childNodes := generateMoves(node)
+    childNodes := orderMoves(childNodes)
+    value := −∞
+    foreach child in childNodes do
+        value := max(value, −negamax(child, depth − 1, −β, −α, −color))
+        α := max(α, value)
+        if α ≥ β then
+            break (* cut-off *)
+    return value
+*/
 fn nega_max(
     grd: [Cell; NB_CELL],
     nb_cap_white: u8,
     nb_cap_black: u8,
+    player: Player,
     depth: u8,
     beta: i32,
     alpha: i32,
-    player: Player,
+    color: i8,
 ) -> (XY<i8>, i32) {
-    (XY { x: 0, y: 0 }, 0)
+    if depth == 0 {
+        return (XY { x: 0, y: 0 }, 50);
+    }
+
+    let to_find = (XY { x: 0, y: 0 }, 0);
+
+    to_find
 }
 
 // SOLVER
@@ -403,10 +424,11 @@ impl GameView {
             self.go_grid,
             self.nb_cap_white,
             self.nb_cap_black,
+            self.player_turn,
             DEPTH,
             std::i32::MIN,
             std::i32::MAX,
-            self.player_turn,
+            1,
         );
 
         match now.elapsed() {
