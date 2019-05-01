@@ -214,6 +214,65 @@ fn check_align_5p(grd: &[Cell; NB_CELL], c: Cell) -> bool {
         }
     }
 
+    nba = 0;
+    for x in 0..GRID_SIZE {
+        nba = 0;
+        for y in 0..GRID_SIZE {
+            if check_pos(grd, XY { x: (x + y) as i8, y: y as i8 }, c) {
+                nba += 1;
+            } else {
+                nba = 0;
+            }
+            if nba >= 5 {
+                return true;
+            }
+        }
+    }
+
+    nba = 0;
+    for x in 0..GRID_SIZE {
+        nba = 0;
+        for y in 0..GRID_SIZE {
+            if check_pos(grd, XY { x: y as i8, y: (x + y) as i8 }, c) {
+                nba += 1;
+            } else {
+                nba = 0;
+            }
+            if nba >= 5 {
+                return true;
+            }
+        }
+    }
+
+    nba = 0;
+    for x in 0..GRID_SIZE {
+        nba = 0;
+        for y in 0..GRID_SIZE {
+            if check_pos(grd, XY { x: (x as i8) - (y as i8), y: y as i8 }, c) {
+                nba += 1;
+            } else {
+                nba = 0;
+            }
+            if nba >= 5 {
+                return true;
+            }
+        }
+    }
+
+    nba = 0;
+    for x in 0..GRID_SIZE {
+        nba = 0;
+        for y in 0..GRID_SIZE {
+            if check_pos(grd, XY { x: (GRID_SIZE as i8 - 1) - (y as i8), y: x as i8 + y as i8 }, c) {
+                nba += 1;
+            } else {
+                nba = 0;
+            }
+            if nba >= 5 {
+                return true;
+            }
+        }
+    }
 
     false
 }
