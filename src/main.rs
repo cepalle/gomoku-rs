@@ -6,6 +6,7 @@ use cursive::views::{Button, Dialog, LinearLayout, TextView, Panel};
 use cursive::vec::Vec2;
 use cursive::event::{AnyCb, Event, EventResult, MouseEvent};
 use cursive::direction::Direction;
+use std::fs::read;
 
 const GRID_SIZE: usize = 19;
 const NB_CELL: usize = GRID_SIZE * GRID_SIZE;
@@ -68,6 +69,14 @@ struct GameView {
     nb_cap_white: u8,
     nb_cap_black: u8,
     nb_turn: u8,
+    end: Option<Option<Player>>,
+}
+
+fn player_to_str(player: Player) -> &'static str {
+    match player {
+        Player::Black => "black",
+        Player::White => "white",
+    }
 }
 
 fn next_player(player: Player) -> Player {
@@ -100,30 +109,6 @@ fn valide_pos(grd: &[Cell; NB_CELL]) -> [bool; NB_CELL] {
     }
     return todo;
 }
-
-/*
-delDoubleThree :: Grid -> Player -> GridBool -> GridBool
-delDoubleThree grd p grd_old =
-  let (mw, mn) = memoDoubleThree
-      toCheck =
-        if p == PlayerWhite
-          then mw
-          else mn
-   in Vec.imap (\i e -> e && checkAllPos grd (toCheck Vb.! i)) grd_old
-  where
-    checkAllPos :: Grid -> Vb.Vector (Vb.Vector (Int, Int, Cell), (Int, Int)) -> Bool
-    checkAllPos grida lpos =
-      let tmp = Vb.map snd $ Vb.filter (checkLPos grida) lpos
-          dDir = Vb.foldl' delDir [] tmp
-       in 1 >= length dDir
-    checkLPos :: Grid -> (Vb.Vector (Int, Int, Cell), (Int, Int)) -> Bool
-    checkLPos grd' (lp, _) = Vb.length lp == Vb.length (Vb.filter (checkPos grd') lp)
-    checkPos :: Grid -> (Int, Int, Cell) -> Bool
-    checkPos grid (x, y, pc) =
-      x >= 0 && x < hGoGrid && y >= 0 && y < hGoGrid && grid Vec.! (y * hGoGrid + x) == cellToChar pc
-    delDir :: [(Int, Int)] -> (Int, Int) -> [(Int, Int)]
-    delDir acc (drx, dry) = filter (\(dx, dy) -> not (drx == negate dx && dry == negate dy)) $ acc ++ [(drx, dry)]
-*/
 
 fn del_double_three(grd: &[Cell; NB_CELL], vld: &mut [bool; NB_CELL], c: Cell) {
     for i in 0..NB_CELL {
@@ -195,9 +180,13 @@ fn delcap(grd: &mut [Cell; NB_CELL], p: XY<i8>, player: Player) -> u8 {
     nb_del
 }
 
+fn check_end_grd(grd: &[Cell; NB_CELL]) -> Option<Player> {
+    None
+}
+
 impl GameView {
     pub fn new(game_mode: GameMode) -> Self {
-        GameView {
+        let mut gv = GameView {
             go_grid: [Cell::Empty; NB_CELL],
             game_mode,
             player_turn: Player::Black,
@@ -206,10 +195,21 @@ impl GameView {
             nb_cap_white: 0,
             nb_cap_black: 0,
             nb_turn: 2,
+            end: None,
+        };
+
+        if let GameMode::Solo(Player::White) = game_mode {
+            gv.go_grid[NB_CELL / 2] = Cell::Black;
+            gv.nb_turn += 1;
         }
+        gv
     }
 
     pub fn handle_mouse(&mut self, p: XY<i8>) {
+        if self.end != None {
+            return;
+        }
+
         let index = xy_to_index(p);
 
         let mut valid = valide_pos(&self.go_grid);
@@ -219,7 +219,6 @@ impl GameView {
         }
 
         self.go_grid[index] = cell_of_player(self.player_turn);
-
         let cap = delcap(&mut self.go_grid, p, self.player_turn);
 
         if self.player_turn == Player::Black {
@@ -228,10 +227,40 @@ impl GameView {
             self.nb_cap_white += cap;
         }
 
-        // check end
-
         self.player_turn = next_player(self.player_turn);
         self.nb_turn += 1;
+
+        if self.nb_cap_black >= 10 {
+            self.end = Some(Some(Player::Black));
+            return;
+        }
+        if self.nb_cap_white >= 10 {
+            self.end = Some(Some(Player::White));
+            return;
+        }
+        if let Some(p) = check_end_grd(&self.go_grid) {
+            self.end = Some(Some(p));
+            return;
+        }
+
+        if let GameMode::Multi = self.game_mode {
+            return;
+        }
+
+        // IA
+
+        if self.nb_cap_black >= 10 {
+            self.end = Some(Some(Player::Black));
+            return;
+        }
+        if self.nb_cap_white >= 10 {
+            self.end = Some(Some(Player::White));
+            return;
+        }
+        if let Some(p) = check_end_grd(&self.go_grid) {
+            self.end = Some(Some(p));
+            return;
+        }
     }
 }
 
@@ -275,15 +304,17 @@ impl cursive::view::View for GameView {
         }
 
         print_tmp(printer, (0, 1), &format!("Turn N°: {}", (self.nb_turn / 2))[..]);
-        print_tmp(printer, (0, 2), &format!("Turn: Player {}",
-                                            match self.player_turn {
-                                                Player::Black => "black",
-                                                Player::White => "white",
-                                            }
-        )[..]);
+        print_tmp(printer, (0, 2), &format!("Turn: Player {}", player_to_str(self.player_turn))[..]);
         print_tmp(printer, (0, 3), &format!("Nb cap Black: {}", self.nb_cap_black)[..]);
         print_tmp(printer, (0, 4), &format!("Nb cap White: {}", self.nb_cap_white)[..]);
         print_tmp(printer, (0, 6), &format!("Time IA: {}", self.ia_time)[..]);
+
+        if let Some(end) = self.end {
+            match end {
+                None => print_tmp(printer, (0, 8), "Draw"),
+                Some(p) => print_tmp(printer, (0, 8), &format!("Player {} win!", player_to_str(p))[..]),
+            }
+        }
     }
 
     fn required_size(&mut self, _: Vec2) -> Vec2 {
@@ -299,7 +330,13 @@ impl cursive::view::View for GameView {
             } => {
                 let pos = position
                     .checked_sub(offset)
-                    .map(|pos| pos.map_x(|x| (x - OFFSET_LEFT_GAME) / LEN_CELL));
+                    .map(|pos| pos.map_x(|x| {
+                        if x > OFFSET_LEFT_GAME {
+                            (x - OFFSET_LEFT_GAME) / LEN_CELL
+                        } else {
+                            1024
+                        }
+                    }));
 
                 if let Some(p) = pos {
                     if p.y < GRID_SIZE && p.x < GRID_SIZE {
