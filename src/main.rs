@@ -315,8 +315,6 @@ fn check_end_grd(
 
 // SOLVER
 
-const DEPTH: i16 = 2;
-
 fn del_dist_1(v: &[bool; NB_CELL]) -> [bool; NB_CELL] {
     let mut todo: [bool; NB_CELL] = [false; NB_CELL];
 
@@ -355,6 +353,7 @@ fn valid_to_pos(v: &[bool; NB_CELL]) -> Vec<(i16, i16)> {
     todo
 }
 
+const DEPTH: i16 = 4;
 const SCORE_CAP: i32 = 200;
 const SCORE_ALIGN_1: i32 = 1;
 const SCORE_ALIGN_2: i32 = 10;
@@ -548,7 +547,7 @@ fn nega_max(
     }
     lpos_score.sort_by_key(|k| k.0);
 
-    for (_, x, y) in lpos_score.iter() {
+    for (_, x, y) in lpos_score.iter().rev() {
         cp = *grd;
         cp[(*x as usize) + (*y as usize) * GRID_SIZE] = cell_of_player(player);
         let cap = delcap(&mut cp, XY { x: *x, y: *y }, player);
