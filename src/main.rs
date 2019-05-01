@@ -23,6 +23,23 @@ const ALL_DIR: [(i8, i8); NB_DIR] = [
 ];
 const OFFSET_LEFT_GAME: usize = 20;
 
+const NB_MASK: usize = 5;
+const LEN_MASK: usize = 6;
+const MEMO_MASK_WHITE: [[(i8, Cell); LEN_MASK]; NB_MASK] = [
+    [(-3, Cell::Empty), (-2, Cell::White), (-1, Cell::White), (0, Cell::Empty), (1, Cell::Empty), (120, Cell::Empty)],
+    [(-2, Cell::Empty), (-1, Cell::White), (0, Cell::Empty), (1, Cell::White), (2, Cell::Empty), (120, Cell::Empty)],
+    [(-4, Cell::Empty), (-3, Cell::White), (-2, Cell::White), (-1, Cell::Empty), (0, Cell::Empty), (1, Cell::Empty)],
+    [(-2, Cell::Empty), (-1, Cell::White), (0, Cell::Empty), (1, Cell::Empty), (2, Cell::White), (3, Cell::Empty)],
+    [(-1, Cell::Empty), (0, Cell::Empty), (1, Cell::White), (2, Cell::Empty), (3, Cell::White), (4, Cell::Empty)],
+];
+const MEMO_MASK_BLACK: [[(i8, Cell); LEN_MASK]; NB_MASK] = [
+    [(-3, Cell::Empty), (-2, Cell::Black), (-1, Cell::Black), (0, Cell::Empty), (1, Cell::Empty), (120, Cell::Empty)],
+    [(-2, Cell::Empty), (-1, Cell::Black), (0, Cell::Empty), (1, Cell::Black), (2, Cell::Empty), (120, Cell::Empty)],
+    [(-4, Cell::Empty), (-3, Cell::Black), (-2, Cell::Black), (-1, Cell::Empty), (0, Cell::Empty), (1, Cell::Empty)],
+    [(-2, Cell::Empty), (-1, Cell::Black), (0, Cell::Empty), (1, Cell::Empty), (2, Cell::Black), (3, Cell::Empty)],
+    [(-1, Cell::Empty), (0, Cell::Empty), (1, Cell::Black), (2, Cell::Empty), (3, Cell::Black), (4, Cell::Empty)],
+];
+
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Player {
     White,
@@ -85,20 +102,6 @@ fn valide_pos(grd: &[Cell; NB_CELL]) -> [bool; NB_CELL] {
 }
 
 /*
-memoDoubleThree ::
-     ( Vb.Vector (Vb.Vector (Vb.Vector (Int, Int, Cell), (Int, Int)))
-     , Vb.Vector (Vb.Vector (Vb.Vector (Int, Int, Cell), (Int, Int))))
-memoDoubleThree =
-  let genWhite =
-        Vb.imap (\i _ -> Vb.fromList $ allDir >>= genPosCheck memoMaskWhite (mod i hGoGrid, div i hGoGrid)) gridInitVb
-      genBlack =
-        Vb.imap (\i _ -> Vb.fromList $ allDir >>= genPosCheck memoMaskBlack (mod i hGoGrid, div i hGoGrid)) gridInitVb
-   in (genWhite, genBlack)
-  where
-    genPosCheck :: [[(Int, Cell)]] -> Coord -> Coord -> [(Vb.Vector (Int, Int, Cell), (Int, Int))]
-    genPosCheck msk (cx, cy) (dx, dy) =
-      map (\r -> (Vb.fromList $ map (\(k, c) -> (cx + dx * k, cy + dy * k, c)) r, (dx, dy))) msk
-
 delDoubleThree :: Grid -> Player -> GridBool -> GridBool
 delDoubleThree grd p grd_old =
   let (mw, mn) = memoDoubleThree
@@ -122,22 +125,32 @@ delDoubleThree grd p grd_old =
     delDir acc (drx, dry) = filter (\(dx, dy) -> not (drx == negate dx && dry == negate dy)) $ acc ++ [(drx, dry)]
 */
 
-const MEMO_MASK_WHITE: [[(i8, Cell); 6]; 5] = [
-    [(-3, Cell::Empty), (-2, Cell::White), (-1, Cell::White), (0, Cell::Empty), (1, Cell::Empty), (120, Cell::Empty)],
-    [(-2, Cell::Empty), (-1, Cell::White), (0, Cell::Empty), (1, Cell::White), (2, Cell::Empty), (120, Cell::Empty)],
-    [(-4, Cell::Empty), (-3, Cell::White), (-2, Cell::White), (-1, Cell::Empty), (0, Cell::Empty), (1, Cell::Empty)],
-    [(-2, Cell::Empty), (-1, Cell::White), (0, Cell::Empty), (1, Cell::Empty), (2, Cell::White), (3, Cell::Empty)],
-    [(-1, Cell::Empty), (0, Cell::Empty), (1, Cell::White), (2, Cell::Empty), (3, Cell::White), (4, Cell::Empty)],
-];
-const MEMO_MASK_BLACK: [[(i8, Cell); 6]; 5] = [
-    [(-3, Cell::Empty), (-2, Cell::Black), (-1, Cell::Black), (0, Cell::Empty), (1, Cell::Empty), (120, Cell::Empty)],
-    [(-2, Cell::Empty), (-1, Cell::Black), (0, Cell::Empty), (1, Cell::Black), (2, Cell::Empty), (120, Cell::Empty)],
-    [(-4, Cell::Empty), (-3, Cell::Black), (-2, Cell::Black), (-1, Cell::Empty), (0, Cell::Empty), (1, Cell::Empty)],
-    [(-2, Cell::Empty), (-1, Cell::Black), (0, Cell::Empty), (1, Cell::Empty), (2, Cell::Black), (3, Cell::Empty)],
-    [(-1, Cell::Empty), (0, Cell::Empty), (1, Cell::Black), (2, Cell::Empty), (3, Cell::Black), (4, Cell::Empty)],
-];
+fn del_double_three(grd: &[Cell; NB_CELL], vld: &mut [bool; NB_CELL], c: Cell) {
+    for i in 0..NB_CELL {
+        if !vld[i] {
+            continue;
+        }
+        vld[i] = check_double_three(grd, vld, c, i);
+    }
 
-fn del_double_three(grd: &[Cell; NB_CELL], vld: &mut [bool; NB_CELL], c: Cell) {}
+    fn check_double_three(grd: &[Cell; NB_CELL], vld: &mut [bool; NB_CELL], c: Cell, index: usize) -> bool {
+        let x = index % GRID_SIZE;
+        let y = index / GRID_SIZE;
+
+        let mut nb_match = 0;
+
+        for i in 0..NB_DIR {
+            for j in 0..NB_MASK {
+                for k in 0..LEN_MASK {
+
+                }
+            }
+        }
+
+
+        true
+    }
+}
 
 fn delcap(grd: &mut [Cell; NB_CELL], p: XY<i8>, player: Player) -> u8 {
     let mut nb_del: u8 = 0;
