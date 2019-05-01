@@ -21,6 +21,7 @@ const ALL_DIR: [(i8, i8); NB_DIR] = [
     (1, -1),
     (-1, 1)
 ];
+const OFFSET_LEFT_GAME: usize = 20;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Player {
@@ -104,7 +105,7 @@ fn delcap(grd: &mut [Cell; NB_CELL], p: XY<i8>, player: Player) -> u8 {
         }
         grd[xy_to_index(xy1)] = Cell::Empty;
         grd[xy_to_index(xy2)] = Cell::Empty;
-        nb_del = nb_del + 2;
+        nb_del += 2;
     }
     nb_del
 }
@@ -136,19 +137,20 @@ impl GameView {
         let cap = delcap(&mut self.go_grid, p, self.player_turn);
 
         if self.player_turn == Player::Black {
-            self.nb_cap_black = self.nb_cap_black + cap;
+            self.nb_cap_black += cap;
         } else {
-            self.nb_cap_white = self.nb_cap_white + cap;
+            self.nb_cap_white += cap;
         }
 
         self.player_turn = next_player(self.player_turn);
+        self.nb_turn += 1;
     }
 }
 
 impl cursive::view::View for GameView {
     fn draw(&self, printer: &Printer) {
         for (i, cell) in self.go_grid.iter().enumerate() {
-            let xp = (i % GRID_SIZE) * LEN_CELL;
+            let xp = (i % GRID_SIZE) * LEN_CELL + OFFSET_LEFT_GAME;
             let yp = i / GRID_SIZE;
 
             let text = match *cell {
@@ -174,10 +176,30 @@ impl cursive::view::View for GameView {
                 |printer| printer.print((xp, yp), text),
             );
         }
+
+        fn print_tmp(printer: &Printer, p: (usize, usize), text: &str) {
+            let color_back = Color::Rgb(200, 200, 200);
+            let color_font = Color::RgbLowRes(0, 0, 0);
+            printer.with_color(
+                ColorStyle::new(color_font, color_back),
+                |printer| printer.print(p, text),
+            );
+        }
+
+        print_tmp(printer, (0, 1), &format!("Turn N°: {}", (self.nb_turn / 2))[..]);
+        print_tmp(printer, (0, 2), &format!("Turn: Player {}",
+                                            match self.player_turn {
+                                                Player::Black => "black",
+                                                Player::White => "white",
+                                            }
+        )[..]);
+        print_tmp(printer, (0, 3), &format!("Nb cap Black: {}", self.nb_cap_black)[..]);
+        print_tmp(printer, (0, 4), &format!("Nb cap White: {}", self.nb_cap_white)[..]);
+        print_tmp(printer, (0, 6), &format!("Time IA: {}", self.ia_time)[..]);
     }
 
     fn required_size(&mut self, _: Vec2) -> Vec2 {
-        Vec2::new(GRID_SIZE * LEN_CELL, GRID_SIZE)
+        Vec2::new(GRID_SIZE * LEN_CELL + OFFSET_LEFT_GAME, GRID_SIZE)
     }
 
     fn on_event(&mut self, event: Event) -> EventResult {
@@ -189,7 +211,7 @@ impl cursive::view::View for GameView {
             } => {
                 let pos = position
                     .checked_sub(offset)
-                    .map(|pos| pos.map_x(|x| x / LEN_CELL));
+                    .map(|pos| pos.map_x(|x| (x - OFFSET_LEFT_GAME) / LEN_CELL));
 
                 if let Some(p) = pos {
                     if p.y < GRID_SIZE && p.x < GRID_SIZE {
