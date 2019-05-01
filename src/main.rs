@@ -182,11 +182,45 @@ fn delcap(grd: &mut [Cell; NB_CELL], p: XY<i8>, player: Player) -> u8 {
     nb_del
 }
 
-fn check_align_5p(grd: &[Cell; NB_CELL], c: Cell) {}
+fn check_align_5p(grd: &[Cell; NB_CELL], c: Cell) -> bool {
+    let mut nba = 0;
+
+    for x in 0..GRID_SIZE {
+        nba = 0;
+        for y in 0..GRID_SIZE {
+            if check_pos(grd, XY { x: x as i8, y: y as i8 }, c) {
+                nba += 1;
+            }
+            if nba >= 5 {
+                return true;
+            }
+        }
+    }
+
+    nba = 0;
+    for x in 0..GRID_SIZE {
+        nba = 0;
+        for y in 0..GRID_SIZE {
+            if check_pos(grd, XY { x: y as i8, y: x as i8 }, c) {
+                nba += 1;
+            }
+            if nba >= 5 {
+                return true;
+            }
+        }
+    }
+
+
+    false
+}
 
 fn check_end_grd(gv: &GameView) -> Option<Player> {
-    // if next player 5 -> Some(nextPlaer)
-    // if player not 5 -> None
+    if check_align_5p(&gv.go_grid, cell_of_player(next_player(gv.player_turn))) {
+        return Some(next_player(gv.player_turn));
+    }
+    if !check_align_5p(&gv.go_grid, cell_of_player(gv.player_turn)) {
+        return None;
+    }
     let mut valid_next = valide_pos(&gv.go_grid);
     del_double_three(&gv.go_grid, &mut valid_next, cell_of_player(next_player(gv.player_turn)));
 
@@ -201,12 +235,17 @@ fn check_end_grd(gv: &GameView) -> Option<Player> {
             if !valid_next[x + y * GRID_SIZE] {
                 continue;
             }
-            cp_grp = *grd;
-            let nb_del = delcap(&mut cp_grp, XY { x: x as i8, y: y as i8 }, next_player(p));
+            cp_grp = gv.go_grid;
+            let nb_del = delcap(&mut cp_grp, XY { x: x as i8, y: y as i8 }, next_player(gv.player_turn));
+            if nb_del == 0 {
+                continue;
+            }
             if nb_cap_next_player + nb_del >= 10 {
                 return None;
             }
-            // si plus 5 -> None
+            if !check_align_5p(&cp_grp, cell_of_player(gv.player_turn)) {
+                return None;
+            }
         }
     }
 
@@ -313,8 +352,8 @@ impl cursive::view::View for GameView {
 
             let text = match *cell {
                 Cell::Empty => " o ",
-                Cell::White => "   ",
-                Cell::Black => "   ",
+                Cell::White => "( )",
+                Cell::Black => "( )",
             };
 
             let color_back = match *cell {
@@ -325,8 +364,8 @@ impl cursive::view::View for GameView {
 
             let color_font = match *cell {
                 Cell::Empty => Color::RgbLowRes(0, 0, 0),
-                Cell::White => Color::RgbLowRes(0, 0, 0),
-                Cell::Black => Color::RgbLowRes(5, 5, 5),
+                Cell::White => Color::RgbLowRes(3, 3, 3),
+                Cell::Black => Color::RgbLowRes(2, 2, 2),
             };
 
             printer.with_color(
