@@ -315,7 +315,7 @@ fn check_end_grd(
 
 // SOLVER
 
-const DEPTH: i16 = 6;
+const DEPTH: i16 = 4;
 
 fn del_dist_1(v: &[bool; NB_CELL]) -> [bool; NB_CELL] {
     let mut todo: [bool; NB_CELL] = [false; NB_CELL];
@@ -488,8 +488,8 @@ fn nega_max(
     nb_cap_white: i16,
     nb_cap_black: i16,
     depth: i16,
-    beta: i32,
     alpha: i32,
+    beta: i32,
     player: Player,
 ) -> (XY<i16>, i32) {
     let mut alpha_mut = alpha;
@@ -539,8 +539,8 @@ fn nega_max(
             if player == Player::White { nb_cap_white + cap } else { nb_cap_white },
             if player == Player::Black { nb_cap_black + cap } else { nb_cap_black },
             depth - 1,
-            -alpha_mut,
             -beta,
+            -alpha_mut,
             next_player(player),
         );
         let ss = -s;
