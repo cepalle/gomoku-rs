@@ -84,6 +84,61 @@ fn valide_pos(grd: &[Cell; NB_CELL]) -> [bool; NB_CELL] {
     return todo;
 }
 
+/*
+memoDoubleThree ::
+     ( Vb.Vector (Vb.Vector (Vb.Vector (Int, Int, Cell), (Int, Int)))
+     , Vb.Vector (Vb.Vector (Vb.Vector (Int, Int, Cell), (Int, Int))))
+memoDoubleThree =
+  let genWhite =
+        Vb.imap (\i _ -> Vb.fromList $ allDir >>= genPosCheck memoMaskWhite (mod i hGoGrid, div i hGoGrid)) gridInitVb
+      genBlack =
+        Vb.imap (\i _ -> Vb.fromList $ allDir >>= genPosCheck memoMaskBlack (mod i hGoGrid, div i hGoGrid)) gridInitVb
+   in (genWhite, genBlack)
+  where
+    genPosCheck :: [[(Int, Cell)]] -> Coord -> Coord -> [(Vb.Vector (Int, Int, Cell), (Int, Int))]
+    genPosCheck msk (cx, cy) (dx, dy) =
+      map (\r -> (Vb.fromList $ map (\(k, c) -> (cx + dx * k, cy + dy * k, c)) r, (dx, dy))) msk
+
+delDoubleThree :: Grid -> Player -> GridBool -> GridBool
+delDoubleThree grd p grd_old =
+  let (mw, mn) = memoDoubleThree
+      toCheck =
+        if p == PlayerWhite
+          then mw
+          else mn
+   in Vec.imap (\i e -> e && checkAllPos grd (toCheck Vb.! i)) grd_old
+  where
+    checkAllPos :: Grid -> Vb.Vector (Vb.Vector (Int, Int, Cell), (Int, Int)) -> Bool
+    checkAllPos grida lpos =
+      let tmp = Vb.map snd $ Vb.filter (checkLPos grida) lpos
+          dDir = Vb.foldl' delDir [] tmp
+       in 1 >= length dDir
+    checkLPos :: Grid -> (Vb.Vector (Int, Int, Cell), (Int, Int)) -> Bool
+    checkLPos grd' (lp, _) = Vb.length lp == Vb.length (Vb.filter (checkPos grd') lp)
+    checkPos :: Grid -> (Int, Int, Cell) -> Bool
+    checkPos grid (x, y, pc) =
+      x >= 0 && x < hGoGrid && y >= 0 && y < hGoGrid && grid Vec.! (y * hGoGrid + x) == cellToChar pc
+    delDir :: [(Int, Int)] -> (Int, Int) -> [(Int, Int)]
+    delDir acc (drx, dry) = filter (\(dx, dy) -> not (drx == negate dx && dry == negate dy)) $ acc ++ [(drx, dry)]
+*/
+
+const MEMO_MASK_WHITE: [[(i8, Cell); 6]; 5] = [
+    [(-3, Cell::Empty), (-2, Cell::White), (-1, Cell::White), (0, Cell::Empty), (1, Cell::Empty), (120, Cell::Empty)],
+    [(-2, Cell::Empty), (-1, Cell::White), (0, Cell::Empty), (1, Cell::White), (2, Cell::Empty), (120, Cell::Empty)],
+    [(-4, Cell::Empty), (-3, Cell::White), (-2, Cell::White), (-1, Cell::Empty), (0, Cell::Empty), (1, Cell::Empty)],
+    [(-2, Cell::Empty), (-1, Cell::White), (0, Cell::Empty), (1, Cell::Empty), (2, Cell::White), (3, Cell::Empty)],
+    [(-1, Cell::Empty), (0, Cell::Empty), (1, Cell::White), (2, Cell::Empty), (3, Cell::White), (4, Cell::Empty)],
+];
+const MEMO_MASK_BLACK: [[(i8, Cell); 6]; 5] = [
+    [(-3, Cell::Empty), (-2, Cell::Black), (-1, Cell::Black), (0, Cell::Empty), (1, Cell::Empty), (120, Cell::Empty)],
+    [(-2, Cell::Empty), (-1, Cell::Black), (0, Cell::Empty), (1, Cell::Black), (2, Cell::Empty), (120, Cell::Empty)],
+    [(-4, Cell::Empty), (-3, Cell::Black), (-2, Cell::Black), (-1, Cell::Empty), (0, Cell::Empty), (1, Cell::Empty)],
+    [(-2, Cell::Empty), (-1, Cell::Black), (0, Cell::Empty), (1, Cell::Empty), (2, Cell::Black), (3, Cell::Empty)],
+    [(-1, Cell::Empty), (0, Cell::Empty), (1, Cell::Black), (2, Cell::Empty), (3, Cell::Black), (4, Cell::Empty)],
+];
+
+fn del_double_three(grd: &[Cell; NB_CELL], vld: &mut [bool; NB_CELL], c: Cell) {}
+
 fn delcap(grd: &mut [Cell; NB_CELL], p: XY<i8>, player: Player) -> u8 {
     let mut nb_del: u8 = 0;
 
@@ -127,7 +182,8 @@ impl GameView {
     pub fn handle_mouse(&mut self, p: XY<i8>) {
         let index = xy_to_index(p);
 
-        let valid = valide_pos(&self.go_grid);
+        let mut valid = valide_pos(&self.go_grid);
+        del_double_three(&self.go_grid, &mut valid, cell_of_player(self.player_turn));
         if !valid[index] {
             return;
         }
@@ -141,6 +197,8 @@ impl GameView {
         } else {
             self.nb_cap_white += cap;
         }
+
+        // check end
 
         self.player_turn = next_player(self.player_turn);
         self.nb_turn += 1;
