@@ -318,6 +318,45 @@ fn check_end_grd(gv: &GameView) -> Option<Player> {
 // SOLVER
 
 const DEPTH: u8 = 6;
+
+fn del_dist_1(v: &[bool; NB_CELL]) -> [bool; NB_CELL] {
+    let mut todo = [false; NB_CELL];
+
+    for i in 0..NB_CELL {
+        let x = (i % GRID_SIZE) as i8;
+        let y = (i / GRID_SIZE) as i8;
+
+        for j in 0..NB_DIR {
+            let (dx, dy) = ALL_DIR[j];
+            let xx = x + dx;
+            let yy = y + dy;
+            todo[i] = todo[i] || !v[i] ||
+                (xx >= 0 && (xx as usize) < GRID_SIZE && yy >= 0 && (yy as usize) < GRID_SIZE &&
+                    !v[(xx as usize) + (yy as usize) * GRID_SIZE]
+                );
+        }
+    }
+
+    for i in 0..NB_CELL {
+        todo[i] = todo[i] && v[i];
+    }
+
+    todo
+}
+
+fn valid_to_pos(v: &[bool; NB_CELL]) -> Vec<(i8, i8)> {
+    let mut todo: Vec<(i8, i8)> = Vec::new();
+
+    for i in 0..NB_CELL {
+        if v[i] {
+            let x = i % GRID_SIZE;
+            let y = i / GRID_SIZE;
+            todo.push((x as i8, y as i8));
+        }
+    }
+    todo
+}
+
 /*
 function negamax(node, depth, α, β, color) is
     if depth = 0 or node is a terminal node then
@@ -337,17 +376,24 @@ fn nega_max(
     grd: [Cell; NB_CELL],
     nb_cap_white: u8,
     nb_cap_black: u8,
-    player: Player,
     depth: u8,
     beta: i32,
     alpha: i32,
-    color: i8,
+    player: Player,
 ) -> (XY<i8>, i32) {
     if depth == 0 {
         return (XY { x: 0, y: 0 }, 50);
     }
 
-    let to_find = (XY { x: 0, y: 0 }, 0);
+    let mut valid = valide_pos(&grd);
+    valid = del_dist_1(&valid);
+    del_double_three(&grd, &mut valid, cell_of_player(player));
+    let lpos = valid_to_pos(&valid);
+
+    // ordoring
+
+    let (x, y) = lpos[0];
+    let to_find = (XY { x, y }, 0);
 
     to_find
 }
@@ -424,11 +470,10 @@ impl GameView {
             self.go_grid,
             self.nb_cap_white,
             self.nb_cap_black,
-            self.player_turn,
             DEPTH,
             std::i32::MIN,
             std::i32::MAX,
-            1,
+            self.player_turn,
         );
 
         match now.elapsed() {
