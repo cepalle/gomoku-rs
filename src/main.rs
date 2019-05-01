@@ -242,7 +242,7 @@ fn check_align_5p(grd: &[Cell; NB_CELL], c: Cell) -> bool {
     for x in 0..GRID_SIZE {
         nba = 0;
         for y in 0..GRID_SIZE {
-            if check_pos(grd, XY { x: (x - y) as i16, y: y as i16 }, c) {
+            if check_pos(grd, XY { x: (x as i16) - (y as i16), y: y as i16 }, c) {
                 nba += 1;
             } else {
                 nba = 0;
@@ -256,7 +256,7 @@ fn check_align_5p(grd: &[Cell; NB_CELL], c: Cell) -> bool {
     for x in 0..GRID_SIZE {
         nba = 0;
         for y in 0..GRID_SIZE {
-            if check_pos(grd, XY { x: (GRID_SIZE - 1 - y) as i16, y: (x + y) as i16 }, c) {
+            if check_pos(grd, XY { x: (GRID_SIZE as i16) - 1 - (y as i16), y: (x + y) as i16 }, c) {
                 nba += 1;
             } else {
                 nba = 0;
@@ -429,7 +429,7 @@ fn scoring_align(grd: &[Cell; NB_CELL], player: Player) -> i32 {
     for x in 0..GRID_SIZE {
         nba = 0;
         for y in 0..GRID_SIZE {
-            if check_pos(grd, XY { x: (x - y) as i16, y: y as i16 }, c) {
+            if check_pos(grd, XY { x: (x as i16) - (y as i16), y: y as i16 }, c) {
                 nba += 1;
             } else {
                 nba = 0;
@@ -441,7 +441,7 @@ fn scoring_align(grd: &[Cell; NB_CELL], player: Player) -> i32 {
     for x in 0..GRID_SIZE {
         nba = 0;
         for y in 0..GRID_SIZE {
-            if check_pos(grd, XY { x: (GRID_SIZE - 1 - y) as i16, y: (x + y) as i16 }, c) {
+            if check_pos(grd, XY { x: (GRID_SIZE as i16) - 1 - (y as i16), y: (x + y) as i16 }, c) {
                 nba += 1;
             } else {
                 nba = 0;
