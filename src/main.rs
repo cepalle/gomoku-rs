@@ -93,10 +93,10 @@ fn delcap(grd: &mut [Cell; NB_CELL], p: XY<i8>, player: Player) -> u8 {
         let xy2: XY<i8> = XY { x: p.x + dx * 2, y: p.y + dy * 2 };
         let xy3: XY<i8> = XY { x: p.x + dx * 3, y: p.y + dy * 3 };
 
-        if !check_pos(grd, xy1, cell_of_player(player)) {
+        if !check_pos(grd, xy1, cell_of_player(next_player(player))) {
             continue;
         }
-        if !check_pos(grd, xy2, cell_of_player(player)) {
+        if !check_pos(grd, xy2, cell_of_player(next_player(player))) {
             continue;
         }
         if !check_pos(grd, xy3, cell_of_player(player)) {
