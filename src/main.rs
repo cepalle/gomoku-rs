@@ -84,7 +84,7 @@ fn cell_of_player(player: Player) -> Cell {
     }
 }
 
-fn check_pos(grd: &mut [Cell; NB_CELL], p: XY<i8>, c: Cell) -> bool {
+fn check_pos(grd: &[Cell; NB_CELL], p: XY<i8>, c: Cell) -> bool {
     p.x >= 0 && (p.x as usize) < GRID_SIZE && p.y >= 0 && (p.y as usize) < GRID_SIZE && grd[xy_to_index(p)] == c
 }
 
@@ -134,21 +134,38 @@ fn del_double_three(grd: &[Cell; NB_CELL], vld: &mut [bool; NB_CELL], c: Cell) {
     }
 
     fn check_double_three(grd: &[Cell; NB_CELL], vld: &mut [bool; NB_CELL], c: Cell, index: usize) -> bool {
-        let x = index % GRID_SIZE;
-        let y = index / GRID_SIZE;
+        let x = (index % GRID_SIZE) as i8;
+        let y = (index / GRID_SIZE) as i8;
+        let memo = match c {
+            Cell::Black => &MEMO_MASK_BLACK,
+            _ => &MEMO_MASK_WHITE,
+        };
 
-        let mut nb_match = 0;
+        let mut dir_match: [bool; NB_DIR] = [false; NB_DIR];
 
         for i in 0..NB_DIR {
+            let (dx, dy) = ALL_DIR[i];
             for j in 0..NB_MASK {
+                let mut b = true;
                 for k in 0..LEN_MASK {
-
+                    let (co, cl) = memo[j][k];
+                    if co >= 100 {
+                        continue;
+                    }
+                    b = b && check_pos(grd, XY { x: x + dx * co, y: y + dy * co }, cl);
                 }
+                dir_match[j] = b || dir_match[j];
             }
         }
 
+        let mut nb_double = 0;
+        for i in 0..4 {
+            if dir_match[i * 2] && dir_match[i * 2 + 1] {
+                nb_double += 1;
+            }
+        }
 
-        true
+        nb_double <= 1
     }
 }
 
