@@ -1,12 +1,12 @@
 extern crate cursive;
 
 use cursive::{Cursive, Printer, XY};
-use cursive::theme::{Color, ColorStyle, BaseColor};
-use cursive::views::{Button, Dialog, LinearLayout, TextView, Panel};
+use cursive::theme::{Color, ColorStyle};
+use cursive::views::{Button, Dialog, LinearLayout, Panel};
 use cursive::vec::Vec2;
-use cursive::event::{AnyCb, Event, EventResult, MouseEvent};
+use cursive::event::{Event, EventResult, MouseEvent};
 use cursive::direction::Direction;
-use std::fs::read;
+use std::time::SystemTime;
 
 const GRID_SIZE: usize = 19;
 const NB_CELL: usize = GRID_SIZE * GRID_SIZE;
@@ -64,7 +64,7 @@ struct GameView {
     go_grid: [Cell; NB_CELL],
     game_mode: GameMode,
     player_turn: Player,
-    ia_time: f32,
+    ia_time: u128,
     cursor_suggestion: Option<XY<i8>>,
     nb_cap_white: u8,
     nb_cap_black: u8,
@@ -105,7 +105,7 @@ fn valide_pos(grd: &[Cell; NB_CELL]) -> [bool; NB_CELL] {
     let mut todo: [bool; NB_CELL] = [true; NB_CELL];
 
     for i in 0..NB_CELL {
-        todo[i] = (grd[i] == Cell::Empty);
+        todo[i] = grd[i] == Cell::Empty;
     }
     return todo;
 }
@@ -115,10 +115,10 @@ fn del_double_three(grd: &[Cell; NB_CELL], vld: &mut [bool; NB_CELL], c: Cell) {
         if !vld[i] {
             continue;
         }
-        vld[i] = check_double_three(grd, vld, c, i);
+        vld[i] = check_double_three(grd, c, i);
     }
 
-    fn check_double_three(grd: &[Cell; NB_CELL], vld: &mut [bool; NB_CELL], c: Cell, index: usize) -> bool {
+    fn check_double_three(grd: &[Cell; NB_CELL], c: Cell, index: usize) -> bool {
         let x = (index % GRID_SIZE) as i8;
         let y = (index / GRID_SIZE) as i8;
         let memo = match c {
@@ -190,7 +190,7 @@ impl GameView {
             go_grid: [Cell::Empty; NB_CELL],
             game_mode,
             player_turn: Player::Black,
-            ia_time: 0.0,
+            ia_time: 0,
             cursor_suggestion: None,
             nb_cap_white: 0,
             nb_cap_black: 0,
@@ -247,7 +247,14 @@ impl GameView {
             return;
         }
 
+        let start = SystemTime::now();
         // IA
+        let end = SystemTime::now();
+        let diff = start.duration_since(end);
+        match diff {
+            Ok(d) => self.ia_time = d.as_millis(),
+            Err(_e) => (),
+        }
 
         if self.nb_cap_black >= 10 {
             self.end = Some(Some(Player::Black));
@@ -326,7 +333,7 @@ impl cursive::view::View for GameView {
             Event::Mouse {
                 offset,
                 position,
-                event: MouseEvent::Release(btn),
+                event: MouseEvent::Release(_btn),
             } => {
                 let pos = position
                     .checked_sub(offset)
