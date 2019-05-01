@@ -182,8 +182,35 @@ fn delcap(grd: &mut [Cell; NB_CELL], p: XY<i8>, player: Player) -> u8 {
     nb_del
 }
 
-fn check_end_grd(grd: &[Cell; NB_CELL]) -> Option<Player> {
-    None
+fn check_align_5p(grd: &[Cell; NB_CELL], c: Cell) {}
+
+fn check_end_grd(gv: &GameView) -> Option<Player> {
+    // if next player 5 -> Some(nextPlaer)
+    // if player not 5 -> None
+    let mut valid_next = valide_pos(&gv.go_grid);
+    del_double_three(&gv.go_grid, &mut valid_next, cell_of_player(next_player(gv.player_turn)));
+
+    let mut cp_grp: [Cell; NB_CELL] = [Cell::Empty; NB_CELL];
+    let nb_cap_next_player = match next_player(gv.player_turn) {
+        Player::White => gv.nb_cap_white,
+        Player::Black => gv.nb_cap_black,
+    };
+
+    for x in 0..GRID_SIZE {
+        for y in 0..GRID_SIZE {
+            if !valid_next[x + y * GRID_SIZE] {
+                continue;
+            }
+            cp_grp = *grd;
+            let nb_del = delcap(&mut cp_grp, XY { x: x as i8, y: y as i8 }, next_player(p));
+            if nb_cap_next_player + nb_del >= 10 {
+                return None;
+            }
+            // si plus 5 -> None
+        }
+    }
+
+    Some(gv.player_turn)
 }
 
 impl GameView {
@@ -229,8 +256,6 @@ impl GameView {
             self.nb_cap_white += cap;
         }
 
-        self.player_turn = next_player(self.player_turn);
-        self.nb_turn += 1;
 
         if self.nb_cap_black >= 10 {
             self.end = Some(Some(Player::Black));
@@ -240,10 +265,13 @@ impl GameView {
             self.end = Some(Some(Player::White));
             return;
         }
-        if let Some(p) = check_end_grd(&self.go_grid) {
+        if let Some(p) = check_end_grd(&self) {
             self.end = Some(Some(p));
             return;
         }
+
+        self.player_turn = next_player(self.player_turn);
+        self.nb_turn += 1;
 
         if let GameMode::Multi = self.game_mode {
             return;
@@ -267,10 +295,13 @@ impl GameView {
             self.end = Some(Some(Player::White));
             return;
         }
-        if let Some(p) = check_end_grd(&self.go_grid) {
+        if let Some(p) = check_end_grd(&self) {
             self.end = Some(Some(p));
             return;
         }
+
+        self.player_turn = next_player(self.player_turn);
+        self.nb_turn += 1;
     }
 }
 
