@@ -315,6 +315,10 @@ fn check_end_grd(gv: &GameView) -> Option<Player> {
     Some(gv.player_turn)
 }
 
+fn solver(grd: &[Cell; NB_CELL], player: Player, nb_cap_white: u8, nb_cap_black: u8) -> XY<i8> {
+    XY { x: 0, y: 0 }
+}
+
 impl GameView {
     pub fn new(game_mode: GameMode) -> Self {
         let mut gv = GameView {
@@ -332,6 +336,7 @@ impl GameView {
         if let GameMode::Solo(Player::White) = game_mode {
             gv.go_grid[NB_CELL / 2] = Cell::Black;
             gv.nb_turn += 1;
+            gv.player_turn = Player::White;
         }
         gv
     }
@@ -358,7 +363,6 @@ impl GameView {
             self.nb_cap_white += cap;
         }
 
-
         if self.nb_cap_black >= 10 {
             self.end = Some(Some(Player::Black));
             return;
@@ -381,12 +385,20 @@ impl GameView {
 
         let now = SystemTime::now();
 
-        // IA
-        thread::sleep(time::Duration::from_millis(500));
+        let xy_ia = solver(&self.go_grid, self.player_turn, self.nb_cap_white, self.nb_cap_black);
 
         match now.elapsed() {
             Ok(d) => self.ia_time = d.as_millis(),
             Err(_e) => (),
+        }
+
+        let index_ia = xy_to_index(xy_ia);
+        self.go_grid[index_ia] = cell_of_player(self.player_turn);
+        let cap = delcap(&mut self.go_grid, xy_ia, self.player_turn);
+        if self.player_turn == Player::Black {
+            self.nb_cap_black += cap;
+        } else {
+            self.nb_cap_white += cap;
         }
 
         if self.nb_cap_black >= 10 {
