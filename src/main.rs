@@ -190,6 +190,8 @@ fn check_align_5p(grd: &[Cell; NB_CELL], c: Cell) -> bool {
         for y in 0..GRID_SIZE {
             if check_pos(grd, XY { x: x as i8, y: y as i8 }, c) {
                 nba += 1;
+            } else {
+                nba = 0;
             }
             if nba >= 5 {
                 return true;
@@ -203,6 +205,8 @@ fn check_align_5p(grd: &[Cell; NB_CELL], c: Cell) -> bool {
         for y in 0..GRID_SIZE {
             if check_pos(grd, XY { x: y as i8, y: x as i8 }, c) {
                 nba += 1;
+            } else {
+                nba = 0;
             }
             if nba >= 5 {
                 return true;
