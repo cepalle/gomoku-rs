@@ -322,7 +322,7 @@ fn check_end_grd(
 
 // SOLVER
 
-const DEPTH: u8 = 6;
+const DEPTH: u8 = 5;
 
 fn del_dist_1(v: &[bool; NB_CELL]) -> [bool; NB_CELL] {
     let mut todo = [false; NB_CELL];
@@ -377,6 +377,126 @@ function negamax(node, depth, α, β, color) is
             break (* cut-off *)
     return value
 */
+
+const SCORE_CAP: i32 = 200;
+const SCORE_ALIGN_1: i32 = 1;
+const SCORE_ALIGN_2: i32 = 10;
+const SCORE_ALIGN_3: i32 = 100;
+const SCORE_ALIGN_4: i32 = 1000;
+const SCORE_ALIGN_5: i32 = 100000;
+
+fn scoring_align(grd: &[Cell; NB_CELL], player: Player) -> i32 {
+    let mut score: i32 = 0;
+    let c = cell_of_player(player);
+    let mut nba = 0;
+
+    fn nba_to_score(nba: i32) -> i32 {
+        match nba {
+            0 => 0,
+            1 => SCORE_ALIGN_1,
+            2 => SCORE_ALIGN_2,
+            3 => SCORE_ALIGN_3,
+            4 => SCORE_ALIGN_4,
+            _ => SCORE_ALIGN_5,
+        }
+    }
+
+    for x in 0..GRID_SIZE {
+        nba = 0;
+        for y in 0..GRID_SIZE {
+            if check_pos(grd, XY { x: x as i8, y: y as i8 }, c) {
+                nba += 1;
+            } else {
+                nba = 0;
+            }
+            score += nba_to_score(nba);
+        }
+    }
+
+    nba = 0;
+    for x in 0..GRID_SIZE {
+        nba = 0;
+        for y in 0..GRID_SIZE {
+            if check_pos(grd, XY { x: y as i8, y: x as i8 }, c) {
+                nba += 1;
+            } else {
+                nba = 0;
+            }
+            score += nba_to_score(nba);
+        }
+    }
+
+    nba = 0;
+    for x in 0..GRID_SIZE {
+        nba = 0;
+        for y in 0..GRID_SIZE {
+            if check_pos(grd, XY { x: (x + y) as i8, y: y as i8 }, c) {
+                nba += 1;
+            } else {
+                nba = 0;
+            }
+            score += nba_to_score(nba);
+        }
+    }
+
+    nba = 0;
+    for x in 0..GRID_SIZE {
+        nba = 0;
+        for y in 0..GRID_SIZE {
+            if check_pos(grd, XY { x: y as i8, y: (x + y) as i8 }, c) {
+                nba += 1;
+            } else {
+                nba = 0;
+            }
+            score += nba_to_score(nba);
+        }
+    }
+
+    nba = 0;
+    for x in 0..GRID_SIZE {
+        nba = 0;
+        for y in 0..GRID_SIZE {
+            if check_pos(grd, XY { x: (x as i8) - (y as i8), y: y as i8 }, c) {
+                nba += 1;
+            } else {
+                nba = 0;
+            }
+            score += nba_to_score(nba);
+        }
+    }
+
+    nba = 0;
+    for x in 0..GRID_SIZE {
+        nba = 0;
+        for y in 0..GRID_SIZE {
+            if check_pos(grd, XY { x: (GRID_SIZE as i8 - 1) - (y as i8), y: x as i8 + y as i8 }, c) {
+                nba += 1;
+            } else {
+                nba = 0;
+            }
+            score += nba_to_score(nba);
+        }
+    }
+
+    score
+}
+
+fn scoring_end(
+    grd: &[Cell; NB_CELL],
+    nb_cap_white: u8,
+    nb_cap_black: u8,
+    player: Player,
+) -> i32 {
+    let mut score: i32 = match player {
+        Player::White => ((nb_cap_white - nb_cap_black) as i32) * SCORE_CAP,
+        Player::Black => ((nb_cap_black - nb_cap_white) as i32) * SCORE_CAP,
+    };
+    score += scoring_align(grd, player);
+    score -= scoring_align(grd, next_player(player));
+
+    score
+}
+
 fn nega_max(
     grd: &[Cell; NB_CELL],
     nb_cap_white: u8,
@@ -413,7 +533,7 @@ fn nega_max(
     }
 
     if depth == 0 {
-        return to_find;
+        return (XY { x: 0, y: 0 }, scoring_end(grd, nb_cap_white, nb_cap_black, player));
     }
 
     let mut valid = valide_pos(&grd);
