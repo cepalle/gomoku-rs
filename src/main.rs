@@ -4,7 +4,7 @@ use cursive::{Cursive, Printer, XY};
 use cursive::theme::{Color, ColorStyle};
 use cursive::views::{Button, Dialog, LinearLayout, Panel};
 use cursive::vec::Vec2;
-use cursive::event::{Event, EventResult, MouseEvent, MouseButton, Callback, Key};
+use cursive::event::{Event, EventResult, MouseEvent, MouseButton, Callback};
 use cursive::direction::Direction;
 use std::time::SystemTime;
 
@@ -50,6 +50,10 @@ const SCORE_ALIGN_2: i32 = 10;
 const SCORE_ALIGN_3: i32 = 100;
 const SCORE_ALIGN_4: i32 = 1000;
 const SCORE_ALIGN_5: i32 = 100000;
+
+const ALPH_INIT: i32 = std::i32::MAX / 2;
+const BETA_INIT: i32 = -ALPH_INIT;
+const SCORE_MAX: i32 = ALPH_INIT / 2;
 
 const CELL_EMPTY: i8 = 0;
 const CELL_WHITE: i8 = 1;
@@ -479,9 +483,7 @@ fn scoring_align(grd: &[[i8; GRID_SIZE]; GRID_SIZE], player: Player) -> i32 {
 }
 
 fn scoring_ordoring(grd: &[[i8; GRID_SIZE]; GRID_SIZE], p: XY<i16>) -> i32 {
-    let XY { x, y } = p;
     let mut score: i32 = 0;
-    let mut nba: i16;
 
     fn check_align(grd: &[[i8; GRID_SIZE]; GRID_SIZE], XY { x, y }: XY<i16>, (dx, dy): (i16, i16), c: i8) -> i32 {
         let mut nba: i16 = 0;
@@ -535,38 +537,36 @@ fn nega_max(
     player: Player,
 ) -> (XY<i16>, i32) {
     let mut alpha_mut = alpha;
-    let mut to_find: (XY<i16>, i32) = (XY { x: (GRID_SIZE / 2) as i16, y: (GRID_SIZE / 2) as i16 }, std::i32::MIN + 100);
+    let mut to_find: (XY<i16>, i32) = (XY { x: (GRID_SIZE / 2) as i16, y: (GRID_SIZE / 2) as i16 }, -ALPH_INIT);
     let mut cp: [[i8; GRID_SIZE]; GRID_SIZE];
 
-    let score_depth_malus = -(depth as i32) * DEPTH_MALUS;
-    let min_score = std::i32::MIN / 2 - score_depth_malus;
-    let max_score = std::i32::MAX / 2 + score_depth_malus;
-
+    let score_end: i32 = SCORE_MAX + (depth as i32) * DEPTH_MALUS;
     if nb_cap_black >= 10 {
         if player == Player::Black {
-            return (XY { x: 0, y: 0 }, max_score);
+            return (XY { x: 0, y: 0 }, score_end);
         } else {
-            return (XY { x: 0, y: 0 }, min_score);
+            return (XY { x: 0, y: 0 }, -score_end);
         }
     }
     if nb_cap_white >= 10 {
         if player == Player::White {
-            return (XY { x: 0, y: 0 }, max_score);
+            return (XY { x: 0, y: 0 }, score_end);
         } else {
-            return (XY { x: 0, y: 0 }, min_score);
+            return (XY { x: 0, y: 0 }, -score_end);
         }
     }
     // need move
     if let Some(p) = check_end_grd(grd, nb_cap_white, nb_cap_black, player) {
         if p == player {
-            return (XY { x: 0, y: 0 }, max_score);
+            return (XY { x: 0, y: 0 }, score_end);
         } else {
-            return (XY { x: 0, y: 0 }, min_score);
+            return (XY { x: 0, y: 0 }, -score_end);
         }
     }
     if depth <= 0 {
         return (XY { x: 0, y: 0 }, scoring_end(grd, nb_cap_white, nb_cap_black, player));
     }
+
 
     let mut valid = empty_pos(&grd);
     valid = del_dist_1(&valid);
@@ -579,11 +579,10 @@ fn nega_max(
     }
     lpos_score.sort_by_key(|k| k.1);
     lpos_score.reverse();
-    /*
     while lpos_score.len() > LEN_LPOS_MAX {
         lpos_score.pop();
     }
-    */
+
 
     for (XY { x, y }, _) in lpos_score.iter() {
         cp = *grd;
@@ -687,8 +686,8 @@ impl GameView {
             self.nb_cap_white,
             self.nb_cap_black,
             DEPTH,
-            std::i32::MIN / 2,
-            std::i32::MAX / 2,
+            ALPH_INIT,
+            BETA_INIT,
             self.player_turn,
         );
 
@@ -733,8 +732,8 @@ impl GameView {
             self.nb_cap_white,
             self.nb_cap_black,
             DEPTH,
-            std::i32::MIN / 2,
-            std::i32::MAX / 2,
+            ALPH_INIT,
+            BETA_INIT,
             self.player_turn,
         );
         match now.elapsed() {
