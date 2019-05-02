@@ -41,13 +41,14 @@ const MEMO_MASK_BLACK: [[(i16, i8); LEN_MASK]; NB_MASK] = [
     [(-1, CELL_EMPTY), (0, CELL_EMPTY), (1, CELL_BLACK), (2, CELL_EMPTY), (3, CELL_BLACK), (4, CELL_EMPTY)],
 ];
 
-const DEPTH: i16 = 3;
+const DEPTH: i16 = 4;
 const SCORE_CAP: i32 = 200;
 const SCORE_ALIGN_1: i32 = 1;
 const SCORE_ALIGN_2: i32 = 10;
 const SCORE_ALIGN_3: i32 = 100;
 const SCORE_ALIGN_4: i32 = 1000;
 const SCORE_ALIGN_5: i32 = 100000;
+const DEPTH_MALUS: i32 = 100;
 
 const CELL_EMPTY: i8 = 0;
 const CELL_WHITE: i8 = 1;
@@ -534,33 +535,33 @@ fn nega_max(
     let mut to_find: (XY<i16>, i32) = (XY { x: (GRID_SIZE / 2) as i16, y: (GRID_SIZE / 2) as i16 }, std::i32::MIN + 100);
     let mut cp: [[i8; GRID_SIZE]; GRID_SIZE];
 
+    let malus_d = ((DEPTH - depth) as i32) * DEPTH_MALUS;
+
     if nb_cap_black >= 10 {
         if player == Player::Black {
-            return (XY { x: 0, y: 0 }, std::i32::MAX / 2);
+            return (XY { x: 0, y: 0 }, std::i32::MAX / 2 - malus_d);
         } else {
-            return (XY { x: 0, y: 0 }, std::i32::MIN / 2);
+            return (XY { x: 0, y: 0 }, std::i32::MIN / 2 + malus_d);
         }
     }
     if nb_cap_white >= 10 {
         if player == Player::White {
-            return (XY { x: 0, y: 0 }, std::i32::MAX / 2);
+            return (XY { x: 0, y: 0 }, std::i32::MAX / 2 - malus_d);
         } else {
-            return (XY { x: 0, y: 0 }, std::i32::MIN / 2);
+            return (XY { x: 0, y: 0 }, std::i32::MIN / 2 + malus_d);
+        }
+    }
+    // need move
+    if let Some(p) = check_end_grd(grd, nb_cap_white, nb_cap_black, player) {
+        if p == player {
+            return (XY { x: 0, y: 0 }, std::i32::MAX / 2 - malus_d);
+        } else {
+            return (XY { x: 0, y: 0 }, std::i32::MIN / 2 + malus_d);
         }
     }
     if depth <= 0 {
         return (XY { x: 0, y: 0 }, scoring_end(grd, nb_cap_white, nb_cap_black, player));
     }
-
-    // need move
-    if let Some(p) = check_end_grd(grd, nb_cap_white, nb_cap_black, player) {
-        if p == player {
-            return (XY { x: 0, y: 0 }, std::i32::MAX / 2);
-        } else {
-            return (XY { x: 0, y: 0 }, std::i32::MIN / 2);
-        }
-    }
-
 
     let mut valid = empty_pos(&grd);
     valid = del_dist_1(&valid);
