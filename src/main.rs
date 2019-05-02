@@ -4,7 +4,7 @@ use cursive::{Cursive, Printer, XY};
 use cursive::theme::{Color, ColorStyle};
 use cursive::views::{Button, Dialog, LinearLayout, Panel};
 use cursive::vec::Vec2;
-use cursive::event::{Event, EventResult, MouseEvent, MouseButton};
+use cursive::event::{Event, EventResult, MouseEvent, MouseButton, Callback};
 use cursive::direction::Direction;
 use std::time::SystemTime;
 
@@ -837,6 +837,12 @@ impl cursive::view::View for GameView {
                             self.handle_player_play(XY { x: p.x as i16, y: p.y as i16 });
                         }
                     }
+
+                    fn test(c: &mut Cursive) {
+                        c.on_event(Event::Key());
+                    }
+
+                    return EventResult::Consumed(Some(Callback::from_fn(test)));
                 }
             }
             _ => (),
