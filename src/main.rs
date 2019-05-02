@@ -476,7 +476,7 @@ fn scoring_align(grd: &[[i8; GRID_SIZE]; GRID_SIZE], player: Player) -> i32 {
     score
 }
 
-fn scoring_ordoring(grd: &[[i8; GRID_SIZE]; GRID_SIZE], player: Player, p: XY<i16>) -> i32 {
+fn scoring_ordoring(grd: &[[i8; GRID_SIZE]; GRID_SIZE], p: XY<i16>) -> i32 {
     let XY { x, y } = p;
     let mut score: i32 = 0;
     let mut nba: i16;
@@ -500,6 +500,8 @@ fn scoring_ordoring(grd: &[[i8; GRID_SIZE]; GRID_SIZE], player: Player, p: XY<i1
 
         score += nba_to_score(ab);
         score += nba_to_score(aw);
+        score += (countcap(grd, p, Player::Black) as i32) * SCORE_CAP;
+        score += (countcap(grd, p, Player::White) as i32) * SCORE_CAP;
     }
 
     score
@@ -567,10 +569,9 @@ fn nega_max(
     del_double_three(&grd, &mut valid, player_to_i8(player));
     let lpos = valid_to_pos(&valid);
 
-
     let mut lpos_score: Vec<(XY<i16>, i32)> = Vec::new();
     for XY { x, y } in lpos.iter() {
-        lpos_score.push((XY { x: *x, y: *y }, scoring_ordoring(grd, player, XY { x: *x, y: *y })))
+        lpos_score.push((XY { x: *x, y: *y }, scoring_ordoring(grd, XY { x: *x, y: *y })))
     }
     lpos_score.sort_by_key(|k| k.1);
 
@@ -664,6 +665,11 @@ impl GameView {
     }
 
     pub fn handle_ia_play(&mut self) {
+        self.cursor_suggestion = None;
+        if self.end != None {
+            return;
+        }
+
         let now = SystemTime::now();
 
         let (xy_ia, _) = nega_max(
