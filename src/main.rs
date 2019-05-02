@@ -42,7 +42,8 @@ const MEMO_MASK_BLACK: [[(i16, i8); LEN_MASK]; NB_MASK] = [
 
 const DEPTH: i16 = 5;
 const DEPTH_MALUS: i32 = 100;
-const LEN_LPOS_MAX: usize = 400;
+const LEN_LPOS_MAX_MALUS_DEPTH: usize = 4;
+const LEN_LPOS_MAX: usize = (DEPTH as usize + 1) * LEN_LPOS_MAX_MALUS_DEPTH;
 
 const SCORE_CAP: i32 = 200;
 const SCORE_ALIGN_1: i32 = 1;
@@ -594,7 +595,9 @@ fn nega_max(
         }
         lpos_score.sort_by_key(|k| k.1);
         lpos_score.reverse();
-        while lpos_score.len() > LEN_LPOS_MAX {
+
+        let len_lpos = LEN_LPOS_MAX - ((DEPTH - depth) as usize) * LEN_LPOS_MAX_MALUS_DEPTH;
+        while lpos_score.len() > len_lpos {
             lpos_score.pop();
         }
         lpos_score
