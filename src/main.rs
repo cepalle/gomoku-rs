@@ -103,11 +103,11 @@ fn check_pos(grd: &[[i8; GRID_SIZE]; GRID_SIZE], p: XY<i16>, c: i8) -> bool {
 }
 
 fn valide_pos(grd: &[[i8; GRID_SIZE]; GRID_SIZE]) -> [[bool; GRID_SIZE]; GRID_SIZE] {
-    let mut todo: [[bool; GRID_SIZE]; GRID_SIZE];
+    let mut todo: [[bool; GRID_SIZE]; GRID_SIZE] = [[false; GRID_SIZE]; GRID_SIZE];
 
-    for i in 0..GRID_SIZE {
-        for j in 0..GRID_SIZE {
-            todo[i][j] = grd[i][j] == CELL_EMPTY;
+    for y in 0..GRID_SIZE {
+        for x in 0..GRID_SIZE {
+            todo[y][x] = grd[y][x] == CELL_EMPTY;
         }
     }
 
@@ -115,16 +115,17 @@ fn valide_pos(grd: &[[i8; GRID_SIZE]; GRID_SIZE]) -> [[bool; GRID_SIZE]; GRID_SI
 }
 
 fn del_double_three(grd: &[[i8; GRID_SIZE]; GRID_SIZE], vld: &mut [[bool; GRID_SIZE]; GRID_SIZE], c: i8) {
-    for i in 0..NB_CELL {
-        if !vld[i] {
-            continue;
+    for y in 0..GRID_SIZE {
+        for x in 0..GRID_SIZE {
+            if !vld[y][x] {
+                continue;
+            }
+            vld[y][x] = check_double_three(grd, c, XY { x: x as i16, y: y as i16 });
         }
-        vld[i] = check_double_three(grd, c, i);
     }
 
-    fn check_double_three(grd: &[[i8; GRID_SIZE]; GRID_SIZE], c: i8, index: usize) -> bool {
-        let x = (index % GRID_SIZE) as i16;
-        let y = (index / GRID_SIZE) as i16;
+    fn check_double_three(grd: &[[i8; GRID_SIZE]; GRID_SIZE], c: i8, xy: XY<i16>) -> bool {
+        let XY { x, y } = xy;
         let memo = match c {
             CELL_BLACK => &MEMO_MASK_BLACK,
             _ => &MEMO_MASK_WHITE,
@@ -177,8 +178,32 @@ fn delcap(grd: &mut [[i8; GRID_SIZE]; GRID_SIZE], p: XY<i16>, player: Player) ->
         if !check_pos(grd, xy3, player_to_i8(player)) {
             continue;
         }
-        grd[xy1.y][xy1.x] = CELL_EMPTY;
-        grd[xy2.y][xy2.x] = CELL_EMPTY;
+        grd[xy1.y as usize][xy1.x as usize] = CELL_EMPTY;
+        grd[xy2.y as usize][xy2.x as usize] = CELL_EMPTY;
+        nb_del += 2;
+    }
+    nb_del
+}
+
+fn countcap(grd: &[[i8; GRID_SIZE]; GRID_SIZE], p: XY<i16>, player: Player) -> i16 {
+    let mut nb_del: i16 = 0;
+
+    for i in 0..NB_DIR {
+        let (dx, dy) = ALL_DIR[i];
+
+        let xy1: XY<i16> = XY { x: p.x + dx, y: p.y + dy };
+        let xy2: XY<i16> = XY { x: p.x + dx * 2, y: p.y + dy * 2 };
+        let xy3: XY<i16> = XY { x: p.x + dx * 3, y: p.y + dy * 3 };
+
+        if !check_pos(grd, xy1, player_to_i8(next_player(player))) {
+            continue;
+        }
+        if !check_pos(grd, xy2, player_to_i8(next_player(player))) {
+            continue;
+        }
+        if !check_pos(grd, xy3, player_to_i8(player)) {
+            continue;
+        }
         nb_del += 2;
     }
     nb_del
@@ -274,6 +299,7 @@ fn check_align_5p(grd: &[[i8; GRID_SIZE]; GRID_SIZE], c: i8) -> bool {
     false
 }
 
+// /!\ Slow
 fn check_end_grd(
     grd: &[[i8; GRID_SIZE]; GRID_SIZE],
     nb_cap_white: i16,
@@ -289,26 +315,26 @@ fn check_end_grd(
     let mut valid_next = valide_pos(grd);
     del_double_three(grd, &mut valid_next, player_to_i8(next_player(player)));
 
-    let mut cp_grp: [[i8; GRID_SIZE]; GRID_SIZE];
     let nb_cap_next_player = match next_player(player) {
         Player::White => nb_cap_white,
         Player::Black => nb_cap_black,
     };
 
-    for x in 0..GRID_SIZE {
-        for y in 0..GRID_SIZE {
-            if !valid_next[x + y * GRID_SIZE] {
+    let mut cp_grd: [[i8; GRID_SIZE]; GRID_SIZE];
+    for y in 0..GRID_SIZE {
+        for x in 0..GRID_SIZE {
+            if !valid_next[y][x] {
                 continue;
             }
-            cp_grp = *grd;
-            let nb_del = delcap(&mut cp_grp, XY { x: x as i16, y: y as i16 }, next_player(player));
+            cp_grd = *grd;
+            let nb_del = delcap(&mut cp_grd, XY { x: x as i16, y: y as i16 }, next_player(player));
             if nb_del == 0 {
                 continue;
             }
             if nb_cap_next_player + nb_del >= 10 {
                 return None;
             }
-            if !check_align_5p(&cp_grp, player_to_i8(player)) {
+            if !check_align_5p(&cp_grd, player_to_i8(player)) {
                 return None;
             }
         }
@@ -320,25 +346,26 @@ fn check_end_grd(
 // SOLVER
 
 fn del_dist_1(v: &[[bool; GRID_SIZE]; GRID_SIZE]) -> [[bool; GRID_SIZE]; GRID_SIZE] {
-    let mut todo: [[bool; GRID_SIZE]; GRID_SIZE] = [false; NB_CELL];
+    let mut todo: [[bool; GRID_SIZE]; GRID_SIZE] = [[false; GRID_SIZE]; GRID_SIZE];
 
-    for i in 0..NB_CELL {
-        let x = (i % GRID_SIZE) as i16;
-        let y = (i / GRID_SIZE) as i16;
-
-        for j in 0..NB_DIR {
-            let (dx, dy) = ALL_DIR[j];
-            let xx = x + dx;
-            let yy = y + dy;
-            todo[i] = todo[i] || !v[i] ||
-                (xx >= 0 && (xx as usize) < GRID_SIZE && yy >= 0 && (yy as usize) < GRID_SIZE &&
-                    !v[(xx as usize) + (yy as usize) * GRID_SIZE]
-                );
+    for y in 0..GRID_SIZE {
+        for x in 0..GRID_SIZE {
+            for j in 0..NB_DIR {
+                let (dx, dy) = ALL_DIR[j];
+                let xx = (x as i16) + dx;
+                let yy = (y as i16) + dy;
+                todo[y][x] = todo[y][x] || !v[y][x] ||
+                    (xx >= 0 && (xx as usize) < GRID_SIZE && yy >= 0 && (yy as usize) < GRID_SIZE &&
+                        !v[y as usize][x as usize]
+                    );
+            }
         }
     }
 
-    for i in 0..NB_CELL {
-        todo[i] = todo[i] && v[i];
+    for y in 0..GRID_SIZE {
+        for x in 0..GRID_SIZE {
+            todo[y][x] = todo[y][x] && v[y][x];
+        }
     }
 
     todo
@@ -347,13 +374,14 @@ fn del_dist_1(v: &[[bool; GRID_SIZE]; GRID_SIZE]) -> [[bool; GRID_SIZE]; GRID_SI
 fn valid_to_pos(v: &[[bool; GRID_SIZE]; GRID_SIZE]) -> Vec<(i16, i16)> {
     let mut todo: Vec<(i16, i16)> = Vec::new();
 
-    for i in 0..NB_CELL {
-        if v[i] {
-            let x = i % GRID_SIZE;
-            let y = i / GRID_SIZE;
-            todo.push((x as i16, y as i16));
+    for y in 0..GRID_SIZE {
+        for x in 0..GRID_SIZE {
+            if v[y][x] {
+                todo.push((x as i16, y as i16));
+            }
         }
     }
+
     todo
 }
 
@@ -603,11 +631,11 @@ impl GameView {
 
         let mut valid = valide_pos(&self.go_grid);
         del_double_three(&self.go_grid, &mut valid, player_to_i8(self.player_turn));
-        if !valid[index] {
+        if !valid[p.y as usize][p.x as usize] {
             return;
         }
 
-        self.go_grid[index] = player_to_i8(self.player_turn);
+        self.go_grid[p.y as usize][p.x as usize] = player_to_i8(self.player_turn);
         let cap = delcap(&mut self.go_grid, p, self.player_turn);
 
         if self.player_turn == Player::Black {
@@ -653,7 +681,7 @@ impl GameView {
             Err(_e) => (),
         }
 
-        self.go_grid[index_ia] = player_to_i8(self.player_turn);
+        self.go_grid[xy_ia.y as usize][xy_ia.x as usize] = player_to_i8(self.player_turn);
         let cap = delcap(&mut self.go_grid, xy_ia, self.player_turn);
         if self.player_turn == Player::Black {
             self.nb_cap_black += cap;
@@ -681,32 +709,33 @@ impl GameView {
 
 impl cursive::view::View for GameView {
     fn draw(&self, printer: &Printer) {
-        for (i, cell) in self.go_grid.iter().enumerate() {
-            let xp = (i % GRID_SIZE) * LEN_CELL + OFFSET_LEFT_GAME;
-            let yp = i / GRID_SIZE;
+        for y in 0..GRID_SIZE {
+            for x in 0..GRID_SIZE {
+                let cell = self.go_grid[y][x];
 
-            let text = match *cell {
-                CELL_EMPTY => " o ",
-                CELL_WHITE => "( )",
-                _ => "( )",
-            };
+                let text = match cell {
+                    CELL_EMPTY => " o ",
+                    CELL_WHITE => "( )",
+                    _ => "( )",
+                };
 
-            let color_back = match *cell {
-                CELL_EMPTY => Color::Rgb(200, 200, 200),
-                CELL_WHITE => Color::RgbLowRes(5, 5, 5),
-                _ => Color::RgbLowRes(0, 0, 0),
-            };
+                let color_back = match cell {
+                    CELL_EMPTY => Color::Rgb(200, 200, 200),
+                    CELL_WHITE => Color::RgbLowRes(5, 5, 5),
+                    _ => Color::RgbLowRes(0, 0, 0),
+                };
 
-            let color_font = match *cell {
-                CELL_EMPTY => Color::RgbLowRes(0, 0, 0),
-                CELL_WHITE => Color::RgbLowRes(3, 3, 3),
-                _ => Color::RgbLowRes(2, 2, 2),
-            };
+                let color_font = match cell {
+                    CELL_EMPTY => Color::RgbLowRes(0, 0, 0),
+                    CELL_WHITE => Color::RgbLowRes(3, 3, 3),
+                    _ => Color::RgbLowRes(2, 2, 2),
+                };
 
-            printer.with_color(
-                ColorStyle::new(color_font, color_back),
-                |printer| printer.print((xp, yp), text),
-            );
+                printer.with_color(
+                    ColorStyle::new(color_font, color_back),
+                    |printer| printer.print((x * LEN_CELL + OFFSET_LEFT_GAME, y), text),
+                );
+            }
         }
 
         fn print_tmp(printer: &Printer, p: (usize, usize), text: &str) {
