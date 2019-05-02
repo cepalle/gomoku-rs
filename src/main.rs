@@ -41,14 +41,15 @@ const MEMO_MASK_BLACK: [[(i16, i8); LEN_MASK]; NB_MASK] = [
 ];
 
 const DEPTH: i16 = 4;
+const DEPTH_MALUS: i32 = 100;
+const LEN_LPOS_MAX: usize = 400;
+
 const SCORE_CAP: i32 = 200;
 const SCORE_ALIGN_1: i32 = 1;
 const SCORE_ALIGN_2: i32 = 10;
 const SCORE_ALIGN_3: i32 = 100;
 const SCORE_ALIGN_4: i32 = 1000;
 const SCORE_ALIGN_5: i32 = 100000;
-const DEPTH_MALUS: i32 = 100;
-const LEN_LPOS_MAX: usize = 400;
 
 const CELL_EMPTY: i8 = 0;
 const CELL_WHITE: i8 = 1;
@@ -538,27 +539,29 @@ fn nega_max(
     let mut cp: [[i8; GRID_SIZE]; GRID_SIZE];
 
     let score_depth = (depth as i32) * DEPTH_MALUS;
+    let min_score = std::i32::MIN / 2 - score_depth;
+    let max_score = std::i32::MAX / 2 + score_depth;
 
     if nb_cap_black >= 10 {
         if player == Player::Black {
-            return (XY { x: 0, y: 0 }, std::i32::MAX / 2 + score_depth);
+            return (XY { x: 0, y: 0 }, max_score);
         } else {
-            return (XY { x: 0, y: 0 }, std::i32::MIN / 2 - score_depth);
+            return (XY { x: 0, y: 0 }, min_score);
         }
     }
     if nb_cap_white >= 10 {
         if player == Player::White {
-            return (XY { x: 0, y: 0 }, std::i32::MAX / 2 + score_depth);
+            return (XY { x: 0, y: 0 }, max_score);
         } else {
-            return (XY { x: 0, y: 0 }, std::i32::MIN / 2 - score_depth);
+            return (XY { x: 0, y: 0 }, min_score);
         }
     }
     // need move
     if let Some(p) = check_end_grd(grd, nb_cap_white, nb_cap_black, player) {
         if p == player {
-            return (XY { x: 0, y: 0 }, std::i32::MAX / 2 + score_depth);
+            return (XY { x: 0, y: 0 }, max_score);
         } else {
-            return (XY { x: 0, y: 0 }, std::i32::MIN / 2 - score_depth);
+            return (XY { x: 0, y: 0 }, min_score);
         }
     }
     if depth <= 0 {
@@ -576,10 +579,11 @@ fn nega_max(
     }
     lpos_score.sort_by_key(|k| k.1);
     lpos_score.reverse();
-
+    /*
     while lpos_score.len() > LEN_LPOS_MAX {
         lpos_score.pop();
     }
+    */
 
     for (XY { x, y }, _) in lpos_score.iter() {
         cp = *grd;
@@ -872,6 +876,8 @@ impl cursive::view::View for GameView {
                     if p != self.player_turn {
                         return EventResult::Consumed(Some(Callback::from_fn(cb_ia)));
                     }
+                } else {
+                    return EventResult::Ignored;
                 }
             }
             _ => (),
