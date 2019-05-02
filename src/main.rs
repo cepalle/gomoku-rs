@@ -9,7 +9,6 @@ use cursive::direction::Direction;
 use std::time::SystemTime;
 
 const GRID_SIZE: usize = 19;
-const NB_CELL: usize = GRID_SIZE * GRID_SIZE;
 const LEN_CELL: usize = 3;
 const NB_DIR: usize = 8;
 const ALL_DIR: [(i16, i16); NB_DIR] = [
@@ -480,27 +479,27 @@ fn scoring_align(grd: &[[i8; GRID_SIZE]; GRID_SIZE], player: Player) -> i32 {
 fn scoring_ordoring(grd: &[[i8; GRID_SIZE]; GRID_SIZE], player: Player, p: XY<i16>) -> i32 {
     let XY { x, y } = p;
     let mut score: i32 = 0;
-    let mut nba: i16 = 0;
+    let mut nba: i16;
 
-    for i in 0..NB_DIR {
-        let (dx, dy) = ALL_DIR[i];
-        nba = 0;
-
+    fn check_align(grd: &[[i8; GRID_SIZE]; GRID_SIZE], XY { x, y }: XY<i16>, (dx, dy): (i16, i16), c: i8) -> i32 {
+        let mut nba: i16 = 0;
         loop {
-            if !check_pos(grd, XY { x: x + dx * nba, y: y + dy * nba }, CELL_BLACK) {
+            if !check_pos(grd, XY { x: x + dx * nba, y: y + dy * nba }, c) {
                 break;
             }
             nba += 1;
-            score += nba_to_score(nba as i32);
         }
-        nba = 0;
-        loop {
-            if !check_pos(grd, XY { x: x + dx * nba, y: y + dy * nba }, CELL_WHITE) {
-                break;
-            }
-            nba += 1;
-            score += nba_to_score(nba as i32);
-        }
+        nba as i32
+    }
+
+    for i in 0..(NB_DIR / 2) {
+        let ab = 1 + check_align(grd, p, ALL_DIR[i], CELL_BLACK)
+            + check_align(grd, p, ALL_DIR[i + 1], CELL_BLACK);
+        let aw = 1 + check_align(grd, p, ALL_DIR[i], CELL_WHITE)
+            + check_align(grd, p, ALL_DIR[i + 1], CELL_WHITE);
+
+        score += nba_to_score(ab);
+        score += nba_to_score(aw);
     }
 
     score
@@ -764,10 +763,25 @@ impl cursive::view::View for GameView {
             }
         }
 
+        let mut valid = empty_pos(&self.go_grid);
+        del_double_three(&self.go_grid, &mut valid, player_to_i8(self.player_turn));
+        for y in 0..GRID_SIZE {
+            for x in 0..GRID_SIZE {
+                valid[y][x] = !valid[y][x] && self.go_grid[y][x] == CELL_EMPTY;
+            }
+        }
+        let lpos = valid_to_pos(&valid);
+        for XY { x, y } in lpos.iter() {
+            printer.with_color(
+                ColorStyle::new(Color::RgbLowRes(5, 0, 0), Color::Rgb(200, 200, 200)),
+                |printer| printer.print(((*x as usize) * LEN_CELL + OFFSET_LEFT_GAME, (*y as usize)), "(X)"),
+            );
+        }
+
         if let Some(p) = self.cursor_suggestion {
             printer.with_color(
-                ColorStyle::new(Color::RgbLowRes(1, 1, 3), Color::Rgb(200, 200, 200)),
-                |printer| printer.print(((p.x as usize) * LEN_CELL + OFFSET_LEFT_GAME, (p.y as usize)), "( )"),
+                ColorStyle::new(Color::RgbLowRes(0, 0, 5), Color::Rgb(255, 200, 200)),
+                |printer| printer.print(((p.x as usize) * LEN_CELL + OFFSET_LEFT_GAME, (p.y as usize)), "(?)"),
             );
         }
 
