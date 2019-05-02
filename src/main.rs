@@ -48,6 +48,7 @@ const SCORE_ALIGN_3: i32 = 100;
 const SCORE_ALIGN_4: i32 = 1000;
 const SCORE_ALIGN_5: i32 = 100000;
 const DEPTH_MALUS: i32 = 100;
+const LEN_LPOS_MAX: usize = 400;
 
 const CELL_EMPTY: i8 = 0;
 const CELL_WHITE: i8 = 1;
@@ -313,7 +314,7 @@ fn check_end_grd(
         return None;
     }
     let mut valid = empty_pos(grd);
-    del_double_three(grd, &mut valid, player_to_i8(next_player(player)));
+    del_double_three(grd, &mut valid, player_to_i8(player));
 
     let nb_cap_player = match player {
         Player::White => nb_cap_white,
@@ -536,28 +537,28 @@ fn nega_max(
     let mut to_find: (XY<i16>, i32) = (XY { x: (GRID_SIZE / 2) as i16, y: (GRID_SIZE / 2) as i16 }, std::i32::MIN + 100);
     let mut cp: [[i8; GRID_SIZE]; GRID_SIZE];
 
-    let malus_d = ((DEPTH - depth) as i32) * DEPTH_MALUS;
+    let score_depth = (depth as i32) * DEPTH_MALUS;
 
     if nb_cap_black >= 10 {
         if player == Player::Black {
-            return (XY { x: 0, y: 0 }, std::i32::MAX / 2 - malus_d);
+            return (XY { x: 0, y: 0 }, std::i32::MAX / 2 + score_depth);
         } else {
-            return (XY { x: 0, y: 0 }, std::i32::MIN / 2 + malus_d);
+            return (XY { x: 0, y: 0 }, std::i32::MIN / 2 - score_depth);
         }
     }
     if nb_cap_white >= 10 {
         if player == Player::White {
-            return (XY { x: 0, y: 0 }, std::i32::MAX / 2 - malus_d);
+            return (XY { x: 0, y: 0 }, std::i32::MAX / 2 + score_depth);
         } else {
-            return (XY { x: 0, y: 0 }, std::i32::MIN / 2 + malus_d);
+            return (XY { x: 0, y: 0 }, std::i32::MIN / 2 - score_depth);
         }
     }
     // need move
     if let Some(p) = check_end_grd(grd, nb_cap_white, nb_cap_black, player) {
         if p == player {
-            return (XY { x: 0, y: 0 }, std::i32::MAX / 2 - malus_d);
+            return (XY { x: 0, y: 0 }, std::i32::MAX / 2 + score_depth);
         } else {
-            return (XY { x: 0, y: 0 }, std::i32::MIN / 2 + malus_d);
+            return (XY { x: 0, y: 0 }, std::i32::MIN / 2 - score_depth);
         }
     }
     if depth <= 0 {
@@ -574,8 +575,13 @@ fn nega_max(
         lpos_score.push((XY { x: *x, y: *y }, scoring_ordoring(grd, XY { x: *x, y: *y })))
     }
     lpos_score.sort_by_key(|k| k.1);
+    lpos_score.reverse();
 
-    for (XY { x, y }, _) in lpos_score.iter().rev() {
+    while lpos_score.len() > LEN_LPOS_MAX {
+        lpos_score.pop();
+    }
+
+    for (XY { x, y }, _) in lpos_score.iter() {
         cp = *grd;
         cp[*y as usize][*x as usize] = player_to_i8(player);
         let cap = delcap(&mut cp, XY { x: *x, y: *y }, player);
@@ -822,6 +828,10 @@ impl cursive::view::View for GameView {
     }
 
     fn on_event(&mut self, event: Event) -> EventResult {
+        if self.end != None {
+            return EventResult::Ignored;
+        }
+
         match event {
             Event::Mouse {
                 offset,
