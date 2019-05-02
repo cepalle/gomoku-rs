@@ -51,9 +51,8 @@ const SCORE_ALIGN_3: i32 = 100;
 const SCORE_ALIGN_4: i32 = 1000;
 const SCORE_ALIGN_5: i32 = 100000;
 
-const ALPH_INIT: i32 = std::i32::MAX / 2;
-const BETA_INIT: i32 = -ALPH_INIT;
-const SCORE_MAX: i32 = ALPH_INIT / 2;
+const INF: i32 = std::i32::MAX / 2;
+const SCORE_MAX: i32 = INF / 2;
 
 const CELL_EMPTY: i8 = 0;
 const CELL_WHITE: i8 = 1;
@@ -537,7 +536,7 @@ fn nega_max(
     player: Player,
 ) -> (XY<i16>, i32) {
     let mut alpha_mut = alpha;
-    let mut to_find: (XY<i16>, i32) = (XY { x: (GRID_SIZE / 2) as i16, y: (GRID_SIZE / 2) as i16 }, -ALPH_INIT);
+    let mut to_find: (XY<i16>, i32) = (XY { x: (GRID_SIZE / 2) as i16, y: (GRID_SIZE / 2) as i16 }, -INF);
     let mut cp: [[i8; GRID_SIZE]; GRID_SIZE];
 
     let score_end: i32 = SCORE_MAX + (depth as i32) * DEPTH_MALUS;
@@ -589,16 +588,18 @@ fn nega_max(
         cp[*y as usize][*x as usize] = player_to_i8(player);
         let cap = delcap(&mut cp, XY { x: *x, y: *y }, player);
 
-        let (_, s) = nega_max(
-            &cp,
-            if player == Player::White { nb_cap_white + cap } else { nb_cap_white },
-            if player == Player::Black { nb_cap_black + cap } else { nb_cap_black },
-            depth - 1,
-            -beta,
-            -alpha_mut,
-            next_player(player),
-        );
-        let ss = -s;
+        let ss = {
+            let (_, s) = nega_max(
+                &cp,
+                if player == Player::White { nb_cap_white + cap } else { nb_cap_white },
+                if player == Player::Black { nb_cap_black + cap } else { nb_cap_black },
+                depth - 1,
+                -beta,
+                -alpha_mut,
+                next_player(player),
+            );
+            -s
+        };
         if ss > to_find.1 {
             to_find = (XY { x: *x, y: *y }, ss);
         }
@@ -686,8 +687,8 @@ impl GameView {
             self.nb_cap_white,
             self.nb_cap_black,
             DEPTH,
-            ALPH_INIT,
-            BETA_INIT,
+            -INF,
+            INF,
             self.player_turn,
         );
 
@@ -732,8 +733,8 @@ impl GameView {
             self.nb_cap_white,
             self.nb_cap_black,
             DEPTH,
-            ALPH_INIT,
-            BETA_INIT,
+            -INF,
+            INF,
             self.player_turn,
         );
         match now.elapsed() {
