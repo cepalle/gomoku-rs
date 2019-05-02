@@ -306,16 +306,16 @@ fn check_end_grd(
     nb_cap_black: i16,
     player: Player,
 ) -> Option<Player> {
-    if check_align_5p(grd, player_to_i8(next_player(player))) {
-        return Some(next_player(player));
+    if check_align_5p(grd, player_to_i8(player)) {
+        return Some(player);
     }
-    if !check_align_5p(grd, player_to_i8(player)) {
+    if !check_align_5p(grd, player_to_i8(next_player(player))) {
         return None;
     }
-    let mut valid_next = empty_pos(grd);
-    del_double_three(grd, &mut valid_next, player_to_i8(next_player(player)));
+    let mut valid = empty_pos(grd);
+    del_double_three(grd, &mut valid, player_to_i8(next_player(player)));
 
-    let nb_cap_next_player = match next_player(player) {
+    let nb_cap_player = match player {
         Player::White => nb_cap_white,
         Player::Black => nb_cap_black,
     };
@@ -323,24 +323,24 @@ fn check_end_grd(
     let mut cp_grd: [[i8; GRID_SIZE]; GRID_SIZE];
     for y in 0..GRID_SIZE {
         for x in 0..GRID_SIZE {
-            if !valid_next[y][x] {
+            if !valid[y][x] {
                 continue;
             }
             cp_grd = *grd;
-            let nb_del = delcap(&mut cp_grd, XY { x: x as i16, y: y as i16 }, next_player(player));
+            let nb_del = delcap(&mut cp_grd, XY { x: x as i16, y: y as i16 }, player);
             if nb_del == 0 {
                 continue;
             }
-            if nb_cap_next_player + nb_del >= 10 {
+            if nb_cap_player + nb_del >= 10 {
                 return None;
             }
-            if !check_align_5p(&cp_grd, player_to_i8(player)) {
+            if !check_align_5p(&cp_grd, player_to_i8(next_player(player))) {
                 return None;
             }
         }
     }
 
-    Some(player)
+    Some(next_player(player))
 }
 
 // SOLVER
@@ -647,6 +647,9 @@ impl GameView {
             self.nb_cap_white += cap;
         }
 
+        self.player_turn = next_player(self.player_turn);
+        self.nb_turn += 1;
+
         if self.nb_cap_black >= 10 {
             self.end = Some(Some(Player::Black));
             return;
@@ -659,9 +662,6 @@ impl GameView {
             self.end = Some(Some(p));
             return;
         }
-
-        self.player_turn = next_player(self.player_turn);
-        self.nb_turn += 1;
     }
 
     pub fn handle_ia_play(&mut self) {
@@ -695,6 +695,9 @@ impl GameView {
             self.nb_cap_white += cap;
         }
 
+        self.player_turn = next_player(self.player_turn);
+        self.nb_turn += 1;
+
         if self.nb_cap_black >= 10 {
             self.end = Some(Some(Player::Black));
             return;
@@ -707,9 +710,6 @@ impl GameView {
             self.end = Some(Some(p));
             return;
         }
-
-        self.player_turn = next_player(self.player_turn);
-        self.nb_turn += 1;
     }
 
     pub fn handle_suggestion(&mut self) {
@@ -843,6 +843,7 @@ impl cursive::view::View for GameView {
                         }
 
                         fn test(c: &mut Cursive) {
+                            c.refresh();
                             c.on_event(Event::Char('p'));
                         }
 
