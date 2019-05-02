@@ -538,9 +538,9 @@ fn nega_max(
     let mut to_find: (XY<i16>, i32) = (XY { x: (GRID_SIZE / 2) as i16, y: (GRID_SIZE / 2) as i16 }, std::i32::MIN + 100);
     let mut cp: [[i8; GRID_SIZE]; GRID_SIZE];
 
-    let score_depth = (depth as i32) * DEPTH_MALUS;
-    let min_score = std::i32::MIN / 2 - score_depth;
-    let max_score = std::i32::MAX / 2 + score_depth;
+    let score_depth_malus = -(depth as i32) * DEPTH_MALUS;
+    let min_score = std::i32::MIN / 2 - score_depth_malus;
+    let max_score = std::i32::MAX / 2 + score_depth_malus;
 
     if nb_cap_black >= 10 {
         if player == Player::Black {
