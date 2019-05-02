@@ -434,79 +434,60 @@ fn scoring_ordoring(grd: &[[i8; GRID_SIZE]; GRID_SIZE], p: XY<i16>) -> i32 {
 fn scoring_align(grd: &[[i8; GRID_SIZE]; GRID_SIZE], player: Player) -> i32 {
     let mut score: i32 = 0;
     let c = player_to_i8(player);
-    let mut nba: i32;
 
-    for x in 0..GRID_SIZE {
-        nba = 0;
-        for y in 0..GRID_SIZE {
-            if check_pos(grd, XY { x: x as i16, y: y as i16 }, c) {
-                nba += 1;
-            } else {
-                nba = 0;
+
+    fn boubou(f: fn(usize, usize) -> XY<i16>, score: &mut i32, c: i8, grd: &[[i8; GRID_SIZE]; GRID_SIZE]) {
+        let mut nba: i32;
+        let mut last_bad_empty: bool;
+
+        for x in 0..(GRID_SIZE + 1) {
+            last_bad_empty = false;
+            nba = 0;
+            for y in 0..(GRID_SIZE + 1) {
+                let p = f(x, y);
+
+                if check_pos(grd, p, c) {
+                    nba += 1;
+                } else if check_pos(grd, p, CELL_EMPTY) {
+                    let ds = nba_to_score(nba);
+                    *score += if last_bad_empty { ds + (ds * 2) / 3 } else { ds + ds / 3 };
+                    nba = 0;
+                    last_bad_empty = true;
+                } else {
+                    let ds = nba_to_score(nba);
+                    *score += if last_bad_empty { ds + ds / 3 } else { ds };
+                    nba = 0;
+                    last_bad_empty = false;
+                }
             }
-            score += nba_to_score(nba);
         }
     }
 
-    for x in 0..GRID_SIZE {
-        nba = 0;
-        for y in 0..GRID_SIZE {
-            if check_pos(grd, XY { x: y as i16, y: x as i16 }, c) {
-                nba += 1;
-            } else {
-                nba = 0;
-            }
-            score += nba_to_score(nba);
-        }
+    fn b1(x: usize, y: usize) -> XY<i16> {
+        XY { x: x as i16, y: y as i16 }
+    }
+    fn b2(x: usize, y: usize) -> XY<i16> {
+        XY { x: y as i16, y: x as i16 }
+    }
+    fn b3(x: usize, y: usize) -> XY<i16> {
+        XY { x: (x + y) as i16, y: y as i16 }
+    }
+    fn b4(x: usize, y: usize) -> XY<i16> {
+        XY { x: y as i16, y: (x + y) as i16 }
+    }
+    fn b5(x: usize, y: usize) -> XY<i16> {
+        XY { x: (x as i16) - (y as i16), y: y as i16 }
+    }
+    fn b6(x: usize, y: usize) -> XY<i16> {
+        XY { x: (GRID_SIZE as i16) - 1 - (y as i16), y: (x + y) as i16 }
     }
 
-    for x in 0..GRID_SIZE {
-        nba = 0;
-        for y in 0..GRID_SIZE {
-            if check_pos(grd, XY { x: (x + y) as i16, y: y as i16 }, c) {
-                nba += 1;
-            } else {
-                nba = 0;
-            }
-            score += nba_to_score(nba);
-        }
-    }
-
-    for x in 0..GRID_SIZE {
-        nba = 0;
-        for y in 0..GRID_SIZE {
-            if check_pos(grd, XY { x: y as i16, y: (x + y) as i16 }, c) {
-                nba += 1;
-            } else {
-                nba = 0;
-            }
-            score += nba_to_score(nba);
-        }
-    }
-
-    for x in 0..GRID_SIZE {
-        nba = 0;
-        for y in 0..GRID_SIZE {
-            if check_pos(grd, XY { x: (x as i16) - (y as i16), y: y as i16 }, c) {
-                nba += 1;
-            } else {
-                nba = 0;
-            }
-            score += nba_to_score(nba);
-        }
-    }
-
-    for x in 0..GRID_SIZE {
-        nba = 0;
-        for y in 0..GRID_SIZE {
-            if check_pos(grd, XY { x: (GRID_SIZE as i16) - 1 - (y as i16), y: (x + y) as i16 }, c) {
-                nba += 1;
-            } else {
-                nba = 0;
-            }
-            score += nba_to_score(nba);
-        }
-    }
+    boubou(b1, &mut score, c, grd);
+    boubou(b2, &mut score, c, grd);
+    boubou(b3, &mut score, c, grd);
+    boubou(b4, &mut score, c, grd);
+    boubou(b5, &mut score, c, grd);
+    boubou(b6, &mut score, c, grd);
 
     score
 }
