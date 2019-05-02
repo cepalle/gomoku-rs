@@ -40,9 +40,9 @@ const MEMO_MASK_BLACK: [[(i16, i8); LEN_MASK]; NB_MASK] = [
     [(-1, CELL_EMPTY), (0, CELL_EMPTY), (1, CELL_BLACK), (2, CELL_EMPTY), (3, CELL_BLACK), (4, CELL_EMPTY)],
 ];
 
-const DEPTH: i16 = 6;
+const DEPTH: i16 = 5;
 const DEPTH_MALUS: i32 = 100;
-const LEN_LPOS_MAX: usize = 8;
+const LEN_LPOS_MAX: usize = 400;
 
 const SCORE_CAP: i32 = 200;
 const SCORE_ALIGN_1: i32 = 1;
@@ -401,6 +401,35 @@ fn nba_to_score(nba: i32) -> i32 {
     }
 }
 
+fn scoring_ordoring(grd: &[[i8; GRID_SIZE]; GRID_SIZE], p: XY<i16>) -> i32 {
+    let mut score: i32 = 0;
+
+    fn check_align(grd: &[[i8; GRID_SIZE]; GRID_SIZE], XY { x, y }: XY<i16>, (dx, dy): (i16, i16), c: i8) -> i32 {
+        let mut nba: i16 = 1;
+        loop {
+            if !check_pos(grd, XY { x: x + dx * nba, y: y + dy * nba }, c) {
+                break;
+            }
+            nba += 1;
+        }
+        nba as i32
+    }
+
+    for i in 0..(NB_DIR / 2) {
+        let ab = 1 + check_align(grd, p, ALL_DIR[i], CELL_BLACK)
+            + check_align(grd, p, ALL_DIR[i + 1], CELL_BLACK);
+        let aw = 1 + check_align(grd, p, ALL_DIR[i], CELL_WHITE)
+            + check_align(grd, p, ALL_DIR[i + 1], CELL_WHITE);
+
+        score += nba_to_score(ab);
+        score += nba_to_score(aw);
+        score += (countcap(grd, p, Player::Black) as i32) * SCORE_CAP;
+        score += (countcap(grd, p, Player::White) as i32) * SCORE_CAP;
+    }
+
+    score
+}
+
 fn scoring_align(grd: &[[i8; GRID_SIZE]; GRID_SIZE], player: Player) -> i32 {
     let mut score: i32 = 0;
     let c = player_to_i8(player);
@@ -481,35 +510,6 @@ fn scoring_align(grd: &[[i8; GRID_SIZE]; GRID_SIZE], player: Player) -> i32 {
     score
 }
 
-fn scoring_ordoring(grd: &[[i8; GRID_SIZE]; GRID_SIZE], p: XY<i16>) -> i32 {
-    let mut score: i32 = 0;
-
-    fn check_align(grd: &[[i8; GRID_SIZE]; GRID_SIZE], XY { x, y }: XY<i16>, (dx, dy): (i16, i16), c: i8) -> i32 {
-        let mut nba: i16 = 1;
-        loop {
-            if !check_pos(grd, XY { x: x + dx * nba, y: y + dy * nba }, c) {
-                break;
-            }
-            nba += 1;
-        }
-        nba as i32
-    }
-
-    for i in 0..(NB_DIR / 2) {
-        let ab = 1 + check_align(grd, p, ALL_DIR[i], CELL_BLACK)
-            + check_align(grd, p, ALL_DIR[i + 1], CELL_BLACK);
-        let aw = 1 + check_align(grd, p, ALL_DIR[i], CELL_WHITE)
-            + check_align(grd, p, ALL_DIR[i + 1], CELL_WHITE);
-
-        score += nba_to_score(ab);
-        score += nba_to_score(aw);
-        score += (countcap(grd, p, Player::Black) as i32) * SCORE_CAP;
-        score += (countcap(grd, p, Player::White) as i32) * SCORE_CAP;
-    }
-
-    score
-}
-
 fn scoring_end(
     grd: &[[i8; GRID_SIZE]; GRID_SIZE],
     nb_cap_white: i16,
@@ -522,6 +522,21 @@ fn scoring_end(
     };
     score += scoring_align(grd, player);
     score -= scoring_align(grd, next_player(player));
+
+    let next_nb_cap_max: i16 = {
+        let mut valid = empty_pos(&grd);
+        valid = del_dist_1(&valid);
+        del_double_three(&grd, &mut valid, player_to_i8(player));
+        let lpos = valid_to_pos(&valid);
+
+        let mut next_nb_cap_max: i16 = 0;
+        for p in lpos.iter() {
+            let c: i16 = countcap(grd, *p, player);
+            next_nb_cap_max = next_nb_cap_max.max(c);
+        }
+        next_nb_cap_max
+    };
+    score += (next_nb_cap_max as i32) * (SCORE_CAP / 2);
 
     score
 }
@@ -567,20 +582,23 @@ fn nega_max(
     }
 
 
-    let mut valid = empty_pos(&grd);
-    valid = del_dist_1(&valid);
-    del_double_three(&grd, &mut valid, player_to_i8(player));
-    let lpos = valid_to_pos(&valid);
+    let lpos_score: Vec<(XY<i16>, i32)> = {
+        let mut valid = empty_pos(&grd);
+        valid = del_dist_1(&valid);
+        del_double_three(&grd, &mut valid, player_to_i8(player));
+        let lpos = valid_to_pos(&valid);
 
-    let mut lpos_score: Vec<(XY<i16>, i32)> = Vec::new();
-    for XY { x, y } in lpos.iter() {
-        lpos_score.push((XY { x: *x, y: *y }, scoring_ordoring(grd, XY { x: *x, y: *y })))
-    }
-    lpos_score.sort_by_key(|k| k.1);
-    lpos_score.reverse();
-    while lpos_score.len() > LEN_LPOS_MAX {
-        lpos_score.pop();
-    }
+        let mut lpos_score: Vec<(XY<i16>, i32)> = Vec::new();
+        for XY { x, y } in lpos.iter() {
+            lpos_score.push((XY { x: *x, y: *y }, scoring_ordoring(grd, XY { x: *x, y: *y })))
+        }
+        lpos_score.sort_by_key(|k| k.1);
+        lpos_score.reverse();
+        while lpos_score.len() > LEN_LPOS_MAX {
+            lpos_score.pop();
+        }
+        lpos_score
+    };
 
 
     for (XY { x, y }, _) in lpos_score.iter() {
