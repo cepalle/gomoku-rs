@@ -4,7 +4,7 @@ use cursive::{Cursive, Printer, XY};
 use cursive::theme::{Color, ColorStyle};
 use cursive::views::{Button, Dialog, LinearLayout, Panel};
 use cursive::vec::Vec2;
-use cursive::event::{Event, EventResult, MouseEvent, MouseButton, Callback};
+use cursive::event::{Event, EventResult, MouseEvent, MouseButton, Callback, Key};
 use cursive::direction::Direction;
 use std::time::SystemTime;
 
@@ -661,11 +661,9 @@ impl GameView {
 
         self.player_turn = next_player(self.player_turn);
         self.nb_turn += 1;
+    }
 
-        if let GameMode::Multi = self.game_mode {
-            return;
-        }
-
+    pub fn handle_ia_play(&mut self) {
         let now = SystemTime::now();
 
         let (xy_ia, _) = nega_max(
@@ -819,32 +817,38 @@ impl cursive::view::View for GameView {
                 position,
                 event: MouseEvent::Release(btn),
             } => {
-                if btn == MouseButton::Middle {
-                    self.handle_suggestion();
-                } else {
-                    let pos = position
-                        .checked_sub(offset)
-                        .map(|pos| pos.map_x(|x| {
-                            if x > OFFSET_LEFT_GAME {
-                                (x - OFFSET_LEFT_GAME) / LEN_CELL
-                            } else {
-                                1024
+                match btn {
+                    MouseButton::Middle => self.handle_suggestion(),
+                    MouseButton::Left => {
+                        let pos = position
+                            .checked_sub(offset)
+                            .map(|pos| pos.map_x(|x| {
+                                if x > OFFSET_LEFT_GAME {
+                                    (x - OFFSET_LEFT_GAME) / LEN_CELL
+                                } else {
+                                    1024
+                                }
+                            }));
+
+                        if let Some(p) = pos {
+                            if p.y < GRID_SIZE && p.x < GRID_SIZE {
+                                self.handle_player_play(XY { x: p.x as i16, y: p.y as i16 });
                             }
-                        }));
-
-                    if let Some(p) = pos {
-                        if p.y < GRID_SIZE && p.x < GRID_SIZE {
-                            self.handle_player_play(XY { x: p.x as i16, y: p.y as i16 });
                         }
-                    }
 
-                    fn test(c: &mut Cursive) {
-                        c.on_event(Event::Key());
-                    }
+                        fn test(c: &mut Cursive) {
+                            c.on_event(Event::Char('p'));
+                        }
 
-                    return EventResult::Consumed(Some(Callback::from_fn(test)));
+                        if let GameMode::Multi = self.game_mode {
+                            return EventResult::Ignored;
+                        }
+                        return EventResult::Consumed(Some(Callback::from_fn(test)));
+                    }
+                    _ => ()
                 }
             }
+            Event::Char('p') => self.handle_ia_play(),
             _ => (),
         }
 
