@@ -485,7 +485,7 @@ fn scoring_ordoring(grd: &[[i8; GRID_SIZE]; GRID_SIZE], p: XY<i16>) -> i32 {
     let mut score: i32 = 0;
 
     fn check_align(grd: &[[i8; GRID_SIZE]; GRID_SIZE], XY { x, y }: XY<i16>, (dx, dy): (i16, i16), c: i8) -> i32 {
-        let mut nba: i16 = 0;
+        let mut nba: i16 = 1;
         loop {
             if !check_pos(grd, XY { x: x + dx * nba, y: y + dy * nba }, c) {
                 break;
