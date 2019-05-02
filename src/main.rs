@@ -66,7 +66,7 @@ enum GameMode {
 }
 
 struct GameView {
-    go_grid: [i8; NB_CELL],
+    go_grid: [[i8; GRID_SIZE]; GRID_SIZE],
     game_mode: GameMode,
     player_turn: Player,
     ia_time: u128,
@@ -98,24 +98,23 @@ fn next_player(player: Player) -> Player {
     }
 }
 
-fn check_pos(grd: &[i8; NB_CELL], p: XY<i16>, c: i8) -> bool {
-    p.x >= 0 && (p.x as usize) < GRID_SIZE && p.y >= 0 && (p.y as usize) < GRID_SIZE && grd[xy_to_index(p)] == c
+fn check_pos(grd: &[[i8; GRID_SIZE]; GRID_SIZE], p: XY<i16>, c: i8) -> bool {
+    p.x >= 0 && (p.x as usize) < GRID_SIZE && p.y >= 0 && (p.y as usize) < GRID_SIZE && grd[p.y as usize][p.x as usize] == c
 }
 
-fn xy_to_index(p: XY<i16>) -> usize {
-    (p.x as usize) + (p.y as usize) * GRID_SIZE
-}
+fn valide_pos(grd: &[[i8; GRID_SIZE]; GRID_SIZE]) -> [[bool; GRID_SIZE]; GRID_SIZE] {
+    let mut todo: [[bool; GRID_SIZE]; GRID_SIZE];
 
-fn valide_pos(grd: &[i8; NB_CELL]) -> [bool; NB_CELL] {
-    let mut todo: [bool; NB_CELL] = [true; NB_CELL];
-
-    for i in 0..NB_CELL {
-        todo[i] = grd[i] == CELL_EMPTY;
+    for i in 0..GRID_SIZE {
+        for j in 0..GRID_SIZE {
+            todo[i][j] = grd[i][j] == CELL_EMPTY;
+        }
     }
-    return todo;
+
+    todo
 }
 
-fn del_double_three(grd: &[i8; NB_CELL], vld: &mut [bool; NB_CELL], c: i8) {
+fn del_double_three(grd: &[[i8; GRID_SIZE]; GRID_SIZE], vld: &mut [[bool; GRID_SIZE]; GRID_SIZE], c: i8) {
     for i in 0..NB_CELL {
         if !vld[i] {
             continue;
@@ -123,7 +122,7 @@ fn del_double_three(grd: &[i8; NB_CELL], vld: &mut [bool; NB_CELL], c: i8) {
         vld[i] = check_double_three(grd, c, i);
     }
 
-    fn check_double_three(grd: &[i8; NB_CELL], c: i8, index: usize) -> bool {
+    fn check_double_three(grd: &[[i8; GRID_SIZE]; GRID_SIZE], c: i8, index: usize) -> bool {
         let x = (index % GRID_SIZE) as i16;
         let y = (index / GRID_SIZE) as i16;
         let memo = match c {
@@ -159,7 +158,7 @@ fn del_double_three(grd: &[i8; NB_CELL], vld: &mut [bool; NB_CELL], c: i8) {
     }
 }
 
-fn delcap(grd: &mut [i8; NB_CELL], p: XY<i16>, player: Player) -> i16 {
+fn delcap(grd: &mut [[i8; GRID_SIZE]; GRID_SIZE], p: XY<i16>, player: Player) -> i16 {
     let mut nb_del: i16 = 0;
 
     for i in 0..NB_DIR {
@@ -178,14 +177,14 @@ fn delcap(grd: &mut [i8; NB_CELL], p: XY<i16>, player: Player) -> i16 {
         if !check_pos(grd, xy3, player_to_i8(player)) {
             continue;
         }
-        grd[xy_to_index(xy1)] = CELL_EMPTY;
-        grd[xy_to_index(xy2)] = CELL_EMPTY;
+        grd[xy1.y][xy1.x] = CELL_EMPTY;
+        grd[xy2.y][xy2.x] = CELL_EMPTY;
         nb_del += 2;
     }
     nb_del
 }
 
-fn check_align_5p(grd: &[i8; NB_CELL], c: i8) -> bool {
+fn check_align_5p(grd: &[[i8; GRID_SIZE]; GRID_SIZE], c: i8) -> bool {
     let mut nba: i32;
 
     for x in 0..GRID_SIZE {
@@ -276,7 +275,7 @@ fn check_align_5p(grd: &[i8; NB_CELL], c: i8) -> bool {
 }
 
 fn check_end_grd(
-    grd: &[i8; NB_CELL],
+    grd: &[[i8; GRID_SIZE]; GRID_SIZE],
     nb_cap_white: i16,
     nb_cap_black: i16,
     player: Player,
@@ -290,7 +289,7 @@ fn check_end_grd(
     let mut valid_next = valide_pos(grd);
     del_double_three(grd, &mut valid_next, player_to_i8(next_player(player)));
 
-    let mut cp_grp: [i8; NB_CELL];
+    let mut cp_grp: [[i8; GRID_SIZE]; GRID_SIZE];
     let nb_cap_next_player = match next_player(player) {
         Player::White => nb_cap_white,
         Player::Black => nb_cap_black,
@@ -320,8 +319,8 @@ fn check_end_grd(
 
 // SOLVER
 
-fn del_dist_1(v: &[bool; NB_CELL]) -> [bool; NB_CELL] {
-    let mut todo: [bool; NB_CELL] = [false; NB_CELL];
+fn del_dist_1(v: &[[bool; GRID_SIZE]; GRID_SIZE]) -> [[bool; GRID_SIZE]; GRID_SIZE] {
+    let mut todo: [[bool; GRID_SIZE]; GRID_SIZE] = [false; NB_CELL];
 
     for i in 0..NB_CELL {
         let x = (i % GRID_SIZE) as i16;
@@ -345,7 +344,7 @@ fn del_dist_1(v: &[bool; NB_CELL]) -> [bool; NB_CELL] {
     todo
 }
 
-fn valid_to_pos(v: &[bool; NB_CELL]) -> Vec<(i16, i16)> {
+fn valid_to_pos(v: &[[bool; GRID_SIZE]; GRID_SIZE]) -> Vec<(i16, i16)> {
     let mut todo: Vec<(i16, i16)> = Vec::new();
 
     for i in 0..NB_CELL {
@@ -369,7 +368,7 @@ fn nba_to_score(nba: i32) -> i32 {
     }
 }
 
-fn scoring_align(grd: &[i8; NB_CELL], player: Player) -> i32 {
+fn scoring_align(grd: &[[i8; GRID_SIZE]; GRID_SIZE], player: Player) -> i32 {
     let mut score: i32 = 0;
     let c = player_to_i8(player);
     let mut nba: i32;
@@ -449,7 +448,7 @@ fn scoring_align(grd: &[i8; NB_CELL], player: Player) -> i32 {
     score
 }
 
-fn scoring_ordoring(grd: &[i8; NB_CELL], player: Player, p: XY<i16>) -> i32 {
+fn scoring_ordoring(grd: &[[i8; GRID_SIZE]; GRID_SIZE], player: Player, p: XY<i16>) -> i32 {
     let XY { x, y } = p;
     let mut score: i32 = 0;
     let mut nba: i16 = 0;
@@ -479,7 +478,7 @@ fn scoring_ordoring(grd: &[i8; NB_CELL], player: Player, p: XY<i16>) -> i32 {
 }
 
 fn scoring_end(
-    grd: &[i8; NB_CELL],
+    grd: &[[i8; GRID_SIZE]; GRID_SIZE],
     nb_cap_white: i16,
     nb_cap_black: i16,
     player: Player,
@@ -495,7 +494,7 @@ fn scoring_end(
 }
 
 fn nega_max(
-    grd: &[i8; NB_CELL],
+    grd: &[[i8; GRID_SIZE]; GRID_SIZE],
     nb_cap_white: i16,
     nb_cap_black: i16,
     depth: i16,
@@ -505,7 +504,7 @@ fn nega_max(
 ) -> (XY<i16>, i32) {
     let mut alpha_mut = alpha;
     let mut to_find: (XY<i16>, i32) = (XY { x: 0, y: 0 }, std::i32::MIN / 2);
-    let mut cp: [i8; NB_CELL];
+    let mut cp: [[i8; GRID_SIZE]; GRID_SIZE];
 
     if nb_cap_black >= 10 {
         if player == Player::Black {
@@ -548,7 +547,7 @@ fn nega_max(
 
     for (_, x, y) in lpos_score.iter().rev() {
         cp = *grd;
-        cp[(*x as usize) + (*y as usize) * GRID_SIZE] = player_to_i8(player);
+        cp[*x as usize][*y as usize] = player_to_i8(player);
         let cap = delcap(&mut cp, XY { x: *x, y: *y }, player);
 
         let (_, s) = nega_max(
@@ -578,7 +577,7 @@ fn nega_max(
 impl GameView {
     pub fn new(game_mode: GameMode) -> Self {
         let mut gv = GameView {
-            go_grid: [0; NB_CELL],
+            go_grid: [[0; GRID_SIZE]; GRID_SIZE],
             game_mode,
             player_turn: Player::Black,
             ia_time: 0,
@@ -590,19 +589,17 @@ impl GameView {
         };
 
         if let GameMode::Solo(Player::White) = game_mode {
-            gv.go_grid[NB_CELL / 2] = CELL_BLACK;
+            gv.go_grid[GRID_SIZE / 2][GRID_SIZE / 2] = CELL_BLACK;
             gv.nb_turn += 1;
             gv.player_turn = Player::White;
         }
         gv
     }
 
-    pub fn handle_mouse(&mut self, p: XY<i16>) {
+    pub fn handle_player_play(&mut self, p: XY<i16>) {
         if self.end != None {
             return;
         }
-
-        let index = xy_to_index(p);
 
         let mut valid = valide_pos(&self.go_grid);
         del_double_three(&self.go_grid, &mut valid, player_to_i8(self.player_turn));
@@ -656,7 +653,6 @@ impl GameView {
             Err(_e) => (),
         }
 
-        let index_ia = xy_to_index(xy_ia);
         self.go_grid[index_ia] = player_to_i8(self.player_turn);
         let cap = delcap(&mut self.go_grid, xy_ia, self.player_turn);
         if self.player_turn == Player::Black {
@@ -759,7 +755,7 @@ impl cursive::view::View for GameView {
 
                 if let Some(p) = pos {
                     if p.y < GRID_SIZE && p.x < GRID_SIZE {
-                        self.handle_mouse(XY { x: p.x as i16, y: p.y as i16 });
+                        self.handle_player_play(XY { x: p.x as i16, y: p.y as i16 });
                     }
                 }
             }
