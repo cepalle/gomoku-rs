@@ -736,6 +736,11 @@ impl GameView {
     }
 }
 
+fn cb_ia(c: &mut Cursive) {
+    c.refresh();
+    c.on_event(Event::Char('p'));
+}
+
 impl cursive::view::View for GameView {
     fn draw(&self, printer: &Printer) {
         for y in 0..GRID_SIZE {
@@ -842,20 +847,23 @@ impl cursive::view::View for GameView {
                             }
                         }
 
-                        fn test(c: &mut Cursive) {
-                            c.refresh();
-                            c.on_event(Event::Char('p'));
-                        }
 
                         if let GameMode::Multi = self.game_mode {
                             return EventResult::Ignored;
                         }
-                        return EventResult::Consumed(Some(Callback::from_fn(test)));
+                        return EventResult::Consumed(Some(Callback::from_fn(cb_ia)));
                     }
                     _ => ()
                 }
             }
-            Event::Char('p') => self.handle_ia_play(),
+            Event::Char('p') => {
+                self.handle_ia_play();
+                if let GameMode::Solo(p) = self.game_mode {
+                    if p != self.player_turn {
+                        return EventResult::Consumed(Some(Callback::from_fn(cb_ia)));
+                    }
+                }
+            }
             _ => (),
         }
 
