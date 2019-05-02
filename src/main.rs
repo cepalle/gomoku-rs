@@ -4,7 +4,7 @@ use cursive::{Cursive, Printer, XY};
 use cursive::theme::{Color, ColorStyle};
 use cursive::views::{Button, Dialog, LinearLayout, Panel};
 use cursive::vec::Vec2;
-use cursive::event::{Event, EventResult, MouseEvent};
+use cursive::event::{Event, EventResult, MouseEvent, MouseButton};
 use cursive::direction::Direction;
 use std::time::SystemTime;
 
@@ -531,7 +531,7 @@ fn nega_max(
     player: Player,
 ) -> (XY<i16>, i32) {
     let mut alpha_mut = alpha;
-    let mut to_find: (XY<i16>, i32) = (XY { x: 0, y: 0 }, std::i32::MIN + 100);
+    let mut to_find: (XY<i16>, i32) = (XY { x: (GRID_SIZE / 2) as i16, y: (GRID_SIZE / 2) as i16 }, std::i32::MIN + 100);
     let mut cp: [[i8; GRID_SIZE]; GRID_SIZE];
 
     if nb_cap_black >= 10 {
@@ -626,6 +626,7 @@ impl GameView {
     }
 
     pub fn handle_player_play(&mut self, p: XY<i16>) {
+        self.cursor_suggestion = None;
         if self.end != None {
             return;
         }
@@ -706,6 +707,29 @@ impl GameView {
         self.player_turn = next_player(self.player_turn);
         self.nb_turn += 1;
     }
+
+    pub fn handle_suggestion(&mut self) {
+        if self.cursor_suggestion != None || self.end != None {
+            return;
+        }
+
+        let now = SystemTime::now();
+        let (xy_ia, _) = nega_max(
+            &self.go_grid,
+            self.nb_cap_white,
+            self.nb_cap_black,
+            DEPTH,
+            std::i32::MIN / 2,
+            std::i32::MAX / 2,
+            self.player_turn,
+        );
+        match now.elapsed() {
+            Ok(d) => self.ia_time = d.as_millis(),
+            Err(_e) => (),
+        }
+
+        self.cursor_suggestion = Some(xy_ia);
+    }
 }
 
 impl cursive::view::View for GameView {
@@ -737,6 +761,13 @@ impl cursive::view::View for GameView {
                     |printer| printer.print((x * LEN_CELL + OFFSET_LEFT_GAME, y), text),
                 );
             }
+        }
+
+        if let Some(p) = self.cursor_suggestion {
+            printer.with_color(
+                ColorStyle::new(Color::RgbLowRes(1, 1, 3), Color::Rgb(200, 200, 200)),
+                |printer| printer.print(((p.x as usize) * LEN_CELL + OFFSET_LEFT_GAME, (p.y as usize)), "( )"),
+            );
         }
 
         fn print_tmp(printer: &Printer, p: (usize, usize), text: &str) {
@@ -771,21 +802,25 @@ impl cursive::view::View for GameView {
             Event::Mouse {
                 offset,
                 position,
-                event: MouseEvent::Release(_btn),
+                event: MouseEvent::Release(btn),
             } => {
-                let pos = position
-                    .checked_sub(offset)
-                    .map(|pos| pos.map_x(|x| {
-                        if x > OFFSET_LEFT_GAME {
-                            (x - OFFSET_LEFT_GAME) / LEN_CELL
-                        } else {
-                            1024
-                        }
-                    }));
+                if btn == MouseButton::Middle {
+                    self.handle_suggestion();
+                } else {
+                    let pos = position
+                        .checked_sub(offset)
+                        .map(|pos| pos.map_x(|x| {
+                            if x > OFFSET_LEFT_GAME {
+                                (x - OFFSET_LEFT_GAME) / LEN_CELL
+                            } else {
+                                1024
+                            }
+                        }));
 
-                if let Some(p) = pos {
-                    if p.y < GRID_SIZE && p.x < GRID_SIZE {
-                        self.handle_player_play(XY { x: p.x as i16, y: p.y as i16 });
+                    if let Some(p) = pos {
+                        if p.y < GRID_SIZE && p.x < GRID_SIZE {
+                            self.handle_player_play(XY { x: p.x as i16, y: p.y as i16 });
+                        }
                     }
                 }
             }
