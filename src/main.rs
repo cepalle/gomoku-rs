@@ -102,7 +102,7 @@ fn check_pos(grd: &[[i8; GRID_SIZE]; GRID_SIZE], p: XY<i16>, c: i8) -> bool {
     p.x >= 0 && (p.x as usize) < GRID_SIZE && p.y >= 0 && (p.y as usize) < GRID_SIZE && grd[p.y as usize][p.x as usize] == c
 }
 
-fn valide_pos(grd: &[[i8; GRID_SIZE]; GRID_SIZE]) -> [[bool; GRID_SIZE]; GRID_SIZE] {
+fn empty_pos(grd: &[[i8; GRID_SIZE]; GRID_SIZE]) -> [[bool; GRID_SIZE]; GRID_SIZE] {
     let mut todo: [[bool; GRID_SIZE]; GRID_SIZE] = [[false; GRID_SIZE]; GRID_SIZE];
 
     for y in 0..GRID_SIZE {
@@ -312,7 +312,7 @@ fn check_end_grd(
     if !check_align_5p(grd, player_to_i8(player)) {
         return None;
     }
-    let mut valid_next = valide_pos(grd);
+    let mut valid_next = empty_pos(grd);
     del_double_three(grd, &mut valid_next, player_to_i8(next_player(player)));
 
     let nb_cap_next_player = match next_player(player) {
@@ -356,7 +356,7 @@ fn del_dist_1(v: &[[bool; GRID_SIZE]; GRID_SIZE]) -> [[bool; GRID_SIZE]; GRID_SI
                 let yy = (y as i16) + dy;
                 todo[y][x] = todo[y][x] || !v[y][x] ||
                     (xx >= 0 && (xx as usize) < GRID_SIZE && yy >= 0 && (yy as usize) < GRID_SIZE &&
-                        !v[y as usize][x as usize]
+                        !v[yy as usize][xx as usize]
                     );
             }
         }
@@ -371,13 +371,13 @@ fn del_dist_1(v: &[[bool; GRID_SIZE]; GRID_SIZE]) -> [[bool; GRID_SIZE]; GRID_SI
     todo
 }
 
-fn valid_to_pos(v: &[[bool; GRID_SIZE]; GRID_SIZE]) -> Vec<(i16, i16)> {
-    let mut todo: Vec<(i16, i16)> = Vec::new();
+fn valid_to_pos(v: &[[bool; GRID_SIZE]; GRID_SIZE]) -> Vec<XY<i16>> {
+    let mut todo: Vec<XY<i16>> = Vec::new();
 
     for y in 0..GRID_SIZE {
         for x in 0..GRID_SIZE {
             if v[y][x] {
-                todo.push((x as i16, y as i16));
+                todo.push(XY { x: x as i16, y: y as i16 });
             }
         }
     }
@@ -531,7 +531,7 @@ fn nega_max(
     player: Player,
 ) -> (XY<i16>, i32) {
     let mut alpha_mut = alpha;
-    let mut to_find: (XY<i16>, i32) = (XY { x: 0, y: 0 }, std::i32::MIN / 2);
+    let mut to_find: (XY<i16>, i32) = (XY { x: 0, y: 0 }, std::i32::MIN + 100);
     let mut cp: [[i8; GRID_SIZE]; GRID_SIZE];
 
     if nb_cap_black >= 10 {
@@ -562,20 +562,22 @@ fn nega_max(
     }
 
 
-    let mut valid = valide_pos(&grd);
+    let mut valid = empty_pos(&grd);
     valid = del_dist_1(&valid);
     del_double_three(&grd, &mut valid, player_to_i8(player));
     let lpos = valid_to_pos(&valid);
 
-    let mut lpos_score: Vec<(i32, i16, i16)> = Vec::new();
-    for (x, y) in lpos.iter() {
-        lpos_score.push((scoring_ordoring(grd, player, XY { x: *x, y: *y }), *x, *y))
-    }
-    lpos_score.sort_by_key(|k| k.0);
 
-    for (_, x, y) in lpos_score.iter().rev() {
+    let mut lpos_score: Vec<(XY<i16>, i32)> = Vec::new();
+    for XY { x, y } in lpos.iter() {
+        lpos_score.push((XY { x: *x, y: *y }, scoring_ordoring(grd, player, XY { x: *x, y: *y })))
+    }
+    lpos_score.sort_by_key(|k| k.1);
+
+
+    for (XY { x, y }, _) in lpos_score.iter().rev() {
         cp = *grd;
-        cp[*x as usize][*y as usize] = player_to_i8(player);
+        cp[*y as usize][*x as usize] = player_to_i8(player);
         let cap = delcap(&mut cp, XY { x: *x, y: *y }, player);
 
         let (_, s) = nega_max(
@@ -605,7 +607,7 @@ fn nega_max(
 impl GameView {
     pub fn new(game_mode: GameMode) -> Self {
         let mut gv = GameView {
-            go_grid: [[0; GRID_SIZE]; GRID_SIZE],
+            go_grid: [[CELL_EMPTY; GRID_SIZE]; GRID_SIZE],
             game_mode,
             player_turn: Player::Black,
             ia_time: 0,
@@ -629,7 +631,7 @@ impl GameView {
             return;
         }
 
-        let mut valid = valide_pos(&self.go_grid);
+        let mut valid = empty_pos(&self.go_grid);
         del_double_three(&self.go_grid, &mut valid, player_to_i8(self.player_turn));
         if !valid[p.y as usize][p.x as usize] {
             return;
