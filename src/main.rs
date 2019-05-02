@@ -26,32 +26,25 @@ const OFFSET_LEFT_GAME: usize = 20;
 
 const NB_MASK: usize = 5;
 const LEN_MASK: usize = 6;
-const MEMO_MASK_WHITE: [[(i16, Cell); LEN_MASK]; NB_MASK] = [
-    [(-3, Cell::Empty), (-2, Cell::White), (-1, Cell::White), (0, Cell::Empty), (1, Cell::Empty), (120, Cell::Empty)],
-    [(-2, Cell::Empty), (-1, Cell::White), (0, Cell::Empty), (1, Cell::White), (2, Cell::Empty), (120, Cell::Empty)],
-    [(-4, Cell::Empty), (-3, Cell::White), (-2, Cell::White), (-1, Cell::Empty), (0, Cell::Empty), (1, Cell::Empty)],
-    [(-2, Cell::Empty), (-1, Cell::White), (0, Cell::Empty), (1, Cell::Empty), (2, Cell::White), (3, Cell::Empty)],
-    [(-1, Cell::Empty), (0, Cell::Empty), (1, Cell::White), (2, Cell::Empty), (3, Cell::White), (4, Cell::Empty)],
+const MEMO_MASK_WHITE: [[(i16, i8); LEN_MASK]; NB_MASK] = [
+    [(-3, CELL_EMPTY), (-2, CELL_WHITE), (-1, CELL_WHITE), (0, CELL_EMPTY), (1, CELL_EMPTY), (120, CELL_EMPTY)],
+    [(-2, CELL_EMPTY), (-1, CELL_WHITE), (0, CELL_EMPTY), (1, CELL_WHITE), (2, CELL_EMPTY), (120, CELL_EMPTY)],
+    [(-4, CELL_EMPTY), (-3, CELL_WHITE), (-2, CELL_WHITE), (-1, CELL_EMPTY), (0, CELL_EMPTY), (1, CELL_EMPTY)],
+    [(-2, CELL_EMPTY), (-1, CELL_WHITE), (0, CELL_EMPTY), (1, CELL_EMPTY), (2, CELL_WHITE), (3, CELL_EMPTY)],
+    [(-1, CELL_EMPTY), (0, CELL_EMPTY), (1, CELL_WHITE), (2, CELL_EMPTY), (3, CELL_WHITE), (4, CELL_EMPTY)],
 ];
-const MEMO_MASK_BLACK: [[(i16, Cell); LEN_MASK]; NB_MASK] = [
-    [(-3, Cell::Empty), (-2, Cell::Black), (-1, Cell::Black), (0, Cell::Empty), (1, Cell::Empty), (120, Cell::Empty)],
-    [(-2, Cell::Empty), (-1, Cell::Black), (0, Cell::Empty), (1, Cell::Black), (2, Cell::Empty), (120, Cell::Empty)],
-    [(-4, Cell::Empty), (-3, Cell::Black), (-2, Cell::Black), (-1, Cell::Empty), (0, Cell::Empty), (1, Cell::Empty)],
-    [(-2, Cell::Empty), (-1, Cell::Black), (0, Cell::Empty), (1, Cell::Empty), (2, Cell::Black), (3, Cell::Empty)],
-    [(-1, Cell::Empty), (0, Cell::Empty), (1, Cell::Black), (2, Cell::Empty), (3, Cell::Black), (4, Cell::Empty)],
+const MEMO_MASK_BLACK: [[(i16, i8); LEN_MASK]; NB_MASK] = [
+    [(-3, CELL_EMPTY), (-2, CELL_BLACK), (-1, CELL_BLACK), (0, CELL_EMPTY), (1, CELL_EMPTY), (120, CELL_EMPTY)],
+    [(-2, CELL_EMPTY), (-1, CELL_BLACK), (0, CELL_EMPTY), (1, CELL_BLACK), (2, CELL_EMPTY), (120, CELL_EMPTY)],
+    [(-4, CELL_EMPTY), (-3, CELL_BLACK), (-2, CELL_BLACK), (-1, CELL_EMPTY), (0, CELL_EMPTY), (1, CELL_EMPTY)],
+    [(-2, CELL_EMPTY), (-1, CELL_BLACK), (0, CELL_EMPTY), (1, CELL_EMPTY), (2, CELL_BLACK), (3, CELL_EMPTY)],
+    [(-1, CELL_EMPTY), (0, CELL_EMPTY), (1, CELL_BLACK), (2, CELL_EMPTY), (3, CELL_BLACK), (4, CELL_EMPTY)],
 ];
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Player {
     White,
     Black,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq)]
-enum Cell {
-    Black,
-    White,
-    Empty,
 }
 
 #[derive(Clone, Copy)]
@@ -61,7 +54,7 @@ enum GameMode {
 }
 
 struct GameView {
-    go_grid: [Cell; NB_CELL],
+    go_grid: [i8; NB_CELL],
     game_mode: GameMode,
     player_turn: Player,
     ia_time: u128,
@@ -70,6 +63,17 @@ struct GameView {
     nb_cap_black: i16,
     nb_turn: i16,
     end: Option<Option<Player>>,
+}
+
+const CELL_EMPTY: i8 = 0;
+const CELL_WHITE: i8 = 1;
+const CELL_BLACK: i8 = 2;
+
+fn player_to_i8(player: Player) -> i8 {
+    match player {
+        Player::Black => CELL_BLACK,
+        Player::White => CELL_WHITE,
+    }
 }
 
 fn player_to_str(player: Player) -> &'static str {
@@ -86,14 +90,7 @@ fn next_player(player: Player) -> Player {
     }
 }
 
-fn cell_of_player(player: Player) -> Cell {
-    match player {
-        Player::Black => Cell::Black,
-        Player::White => Cell::White,
-    }
-}
-
-fn check_pos(grd: &[Cell; NB_CELL], p: XY<i16>, c: Cell) -> bool {
+fn check_pos(grd: &[i8; NB_CELL], p: XY<i16>, c: i8) -> bool {
     p.x >= 0 && (p.x as usize) < GRID_SIZE && p.y >= 0 && (p.y as usize) < GRID_SIZE && grd[xy_to_index(p)] == c
 }
 
@@ -101,16 +98,16 @@ fn xy_to_index(p: XY<i16>) -> usize {
     (p.x as usize) + (p.y as usize) * GRID_SIZE
 }
 
-fn valide_pos(grd: &[Cell; NB_CELL]) -> [bool; NB_CELL] {
+fn valide_pos(grd: &[i8; NB_CELL]) -> [bool; NB_CELL] {
     let mut todo: [bool; NB_CELL] = [true; NB_CELL];
 
     for i in 0..NB_CELL {
-        todo[i] = grd[i] == Cell::Empty;
+        todo[i] = grd[i] == CELL_EMPTY;
     }
     return todo;
 }
 
-fn del_double_three(grd: &[Cell; NB_CELL], vld: &mut [bool; NB_CELL], c: Cell) {
+fn del_double_three(grd: &[i8; NB_CELL], vld: &mut [bool; NB_CELL], c: i8) {
     for i in 0..NB_CELL {
         if !vld[i] {
             continue;
@@ -118,11 +115,11 @@ fn del_double_three(grd: &[Cell; NB_CELL], vld: &mut [bool; NB_CELL], c: Cell) {
         vld[i] = check_double_three(grd, c, i);
     }
 
-    fn check_double_three(grd: &[Cell; NB_CELL], c: Cell, index: usize) -> bool {
+    fn check_double_three(grd: &[i8; NB_CELL], c: i8, index: usize) -> bool {
         let x = (index % GRID_SIZE) as i16;
         let y = (index / GRID_SIZE) as i16;
         let memo = match c {
-            Cell::Black => &MEMO_MASK_BLACK,
+            CELL_BLACK => &MEMO_MASK_BLACK,
             _ => &MEMO_MASK_WHITE,
         };
 
@@ -154,7 +151,7 @@ fn del_double_three(grd: &[Cell; NB_CELL], vld: &mut [bool; NB_CELL], c: Cell) {
     }
 }
 
-fn delcap(grd: &mut [Cell; NB_CELL], p: XY<i16>, player: Player) -> i16 {
+fn delcap(grd: &mut [i8; NB_CELL], p: XY<i16>, player: Player) -> i16 {
     let mut nb_del: i16 = 0;
 
     for i in 0..NB_DIR {
@@ -164,23 +161,23 @@ fn delcap(grd: &mut [Cell; NB_CELL], p: XY<i16>, player: Player) -> i16 {
         let xy2: XY<i16> = XY { x: p.x + dx * 2, y: p.y + dy * 2 };
         let xy3: XY<i16> = XY { x: p.x + dx * 3, y: p.y + dy * 3 };
 
-        if !check_pos(grd, xy1, cell_of_player(next_player(player))) {
+        if !check_pos(grd, xy1, player_to_i8(next_player(player))) {
             continue;
         }
-        if !check_pos(grd, xy2, cell_of_player(next_player(player))) {
+        if !check_pos(grd, xy2, player_to_i8(next_player(player))) {
             continue;
         }
-        if !check_pos(grd, xy3, cell_of_player(player)) {
+        if !check_pos(grd, xy3, player_to_i8(player)) {
             continue;
         }
-        grd[xy_to_index(xy1)] = Cell::Empty;
-        grd[xy_to_index(xy2)] = Cell::Empty;
+        grd[xy_to_index(xy1)] = CELL_EMPTY;
+        grd[xy_to_index(xy2)] = CELL_EMPTY;
         nb_del += 2;
     }
     nb_del
 }
 
-fn check_align_5p(grd: &[Cell; NB_CELL], c: Cell) -> bool {
+fn check_align_5p(grd: &[i8; NB_CELL], c: i8) -> bool {
     let mut nba: i32;
 
     for x in 0..GRID_SIZE {
@@ -271,21 +268,21 @@ fn check_align_5p(grd: &[Cell; NB_CELL], c: Cell) -> bool {
 }
 
 fn check_end_grd(
-    grd: &[Cell; NB_CELL],
+    grd: &[i8; NB_CELL],
     nb_cap_white: i16,
     nb_cap_black: i16,
     player: Player,
 ) -> Option<Player> {
-    if check_align_5p(grd, cell_of_player(next_player(player))) {
+    if check_align_5p(grd, player_to_i8(next_player(player))) {
         return Some(next_player(player));
     }
-    if !check_align_5p(grd, cell_of_player(player)) {
+    if !check_align_5p(grd, player_to_i8(player)) {
         return None;
     }
     let mut valid_next = valide_pos(grd);
-    del_double_three(grd, &mut valid_next, cell_of_player(next_player(player)));
+    del_double_three(grd, &mut valid_next, player_to_i8(next_player(player)));
 
-    let mut cp_grp: [Cell; NB_CELL];
+    let mut cp_grp: [i8; NB_CELL];
     let nb_cap_next_player = match next_player(player) {
         Player::White => nb_cap_white,
         Player::Black => nb_cap_black,
@@ -304,7 +301,7 @@ fn check_end_grd(
             if nb_cap_next_player + nb_del >= 10 {
                 return None;
             }
-            if !check_align_5p(&cp_grp, cell_of_player(player)) {
+            if !check_align_5p(&cp_grp, player_to_i8(player)) {
                 return None;
             }
         }
@@ -372,9 +369,9 @@ fn nba_to_score(nba: i32) -> i32 {
     }
 }
 
-fn scoring_align(grd: &[Cell; NB_CELL], player: Player) -> i32 {
+fn scoring_align(grd: &[i8; NB_CELL], player: Player) -> i32 {
     let mut score: i32 = 0;
-    let c = cell_of_player(player);
+    let c = player_to_i8(player);
     let mut nba: i32;
 
     for x in 0..GRID_SIZE {
@@ -452,7 +449,7 @@ fn scoring_align(grd: &[Cell; NB_CELL], player: Player) -> i32 {
     score
 }
 
-fn scoring_ordoring(grd: &[Cell; NB_CELL], player: Player, p: XY<i16>) -> i32 {
+fn scoring_ordoring(grd: &[i8; NB_CELL], player: Player, p: XY<i16>) -> i32 {
     let XY { x, y } = p;
     let mut score: i32 = 0;
     let mut nba: i16 = 0;
@@ -462,7 +459,7 @@ fn scoring_ordoring(grd: &[Cell; NB_CELL], player: Player, p: XY<i16>) -> i32 {
         nba = 0;
 
         loop {
-            if !check_pos(grd, XY { x: x + dx * nba, y: y + dy * nba }, Cell::Black) {
+            if !check_pos(grd, XY { x: x + dx * nba, y: y + dy * nba }, CELL_BLACK) {
                 break;
             }
             nba += 1;
@@ -470,7 +467,7 @@ fn scoring_ordoring(grd: &[Cell; NB_CELL], player: Player, p: XY<i16>) -> i32 {
         }
         nba = 0;
         loop {
-            if !check_pos(grd, XY { x: x + dx * nba, y: y + dy * nba }, Cell::White) {
+            if !check_pos(grd, XY { x: x + dx * nba, y: y + dy * nba }, CELL_WHITE) {
                 break;
             }
             nba += 1;
@@ -482,7 +479,7 @@ fn scoring_ordoring(grd: &[Cell; NB_CELL], player: Player, p: XY<i16>) -> i32 {
 }
 
 fn scoring_end(
-    grd: &[Cell; NB_CELL],
+    grd: &[i8; NB_CELL],
     nb_cap_white: i16,
     nb_cap_black: i16,
     player: Player,
@@ -498,7 +495,7 @@ fn scoring_end(
 }
 
 fn nega_max(
-    grd: &[Cell; NB_CELL],
+    grd: &[i8; NB_CELL],
     nb_cap_white: i16,
     nb_cap_black: i16,
     depth: i16,
@@ -508,7 +505,7 @@ fn nega_max(
 ) -> (XY<i16>, i32) {
     let mut alpha_mut = alpha;
     let mut to_find: (XY<i16>, i32) = (XY { x: 0, y: 0 }, std::i32::MIN / 2);
-    let mut cp: [Cell; NB_CELL];
+    let mut cp: [i8; NB_CELL];
 
     if nb_cap_black >= 10 {
         if player == Player::Black {
@@ -538,7 +535,7 @@ fn nega_max(
 
     let mut valid = valide_pos(&grd);
     valid = del_dist_1(&valid);
-    del_double_three(&grd, &mut valid, cell_of_player(player));
+    del_double_three(&grd, &mut valid, player_to_i8(player));
     let lpos = valid_to_pos(&valid);
 
     let mut lpos_score: Vec<(i32, i16, i16)> = Vec::new();
@@ -549,7 +546,7 @@ fn nega_max(
 
     for (_, x, y) in lpos_score.iter().rev() {
         cp = *grd;
-        cp[(*x as usize) + (*y as usize) * GRID_SIZE] = cell_of_player(player);
+        cp[(*x as usize) + (*y as usize) * GRID_SIZE] = player_to_i8(player);
         let cap = delcap(&mut cp, XY { x: *x, y: *y }, player);
 
         let (_, s) = nega_max(
@@ -579,7 +576,7 @@ fn nega_max(
 impl GameView {
     pub fn new(game_mode: GameMode) -> Self {
         let mut gv = GameView {
-            go_grid: [Cell::Empty; NB_CELL],
+            go_grid: [0; NB_CELL],
             game_mode,
             player_turn: Player::Black,
             ia_time: 0,
@@ -591,7 +588,7 @@ impl GameView {
         };
 
         if let GameMode::Solo(Player::White) = game_mode {
-            gv.go_grid[NB_CELL / 2] = Cell::Black;
+            gv.go_grid[NB_CELL / 2] = CELL_BLACK;
             gv.nb_turn += 1;
             gv.player_turn = Player::White;
         }
@@ -606,12 +603,12 @@ impl GameView {
         let index = xy_to_index(p);
 
         let mut valid = valide_pos(&self.go_grid);
-        del_double_three(&self.go_grid, &mut valid, cell_of_player(self.player_turn));
+        del_double_three(&self.go_grid, &mut valid, player_to_i8(self.player_turn));
         if !valid[index] {
             return;
         }
 
-        self.go_grid[index] = cell_of_player(self.player_turn);
+        self.go_grid[index] = player_to_i8(self.player_turn);
         let cap = delcap(&mut self.go_grid, p, self.player_turn);
 
         if self.player_turn == Player::Black {
@@ -658,7 +655,7 @@ impl GameView {
         }
 
         let index_ia = xy_to_index(xy_ia);
-        self.go_grid[index_ia] = cell_of_player(self.player_turn);
+        self.go_grid[index_ia] = player_to_i8(self.player_turn);
         let cap = delcap(&mut self.go_grid, xy_ia, self.player_turn);
         if self.player_turn == Player::Black {
             self.nb_cap_black += cap;
@@ -691,21 +688,21 @@ impl cursive::view::View for GameView {
             let yp = i / GRID_SIZE;
 
             let text = match *cell {
-                Cell::Empty => " o ",
-                Cell::White => "( )",
-                Cell::Black => "( )",
+                CELL_EMPTY => " o ",
+                CELL_WHITE => "( )",
+                _ => "( )",
             };
 
             let color_back = match *cell {
-                Cell::Empty => Color::Rgb(200, 200, 200),
-                Cell::White => Color::RgbLowRes(5, 5, 5),
-                Cell::Black => Color::RgbLowRes(0, 0, 0),
+                CELL_EMPTY => Color::Rgb(200, 200, 200),
+                CELL_WHITE => Color::RgbLowRes(5, 5, 5),
+                _ => Color::RgbLowRes(0, 0, 0),
             };
 
             let color_font = match *cell {
-                Cell::Empty => Color::RgbLowRes(0, 0, 0),
-                Cell::White => Color::RgbLowRes(3, 3, 3),
-                Cell::Black => Color::RgbLowRes(2, 2, 2),
+                CELL_EMPTY => Color::RgbLowRes(0, 0, 0),
+                CELL_WHITE => Color::RgbLowRes(3, 3, 3),
+                _ => Color::RgbLowRes(2, 2, 2),
             };
 
             printer.with_color(
