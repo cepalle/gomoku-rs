@@ -41,7 +41,7 @@ const MEMO_MASK_BLACK: [[(i16, i8); LEN_MASK]; NB_MASK] = [
     [(-1, CELL_EMPTY), (0, CELL_EMPTY), (1, CELL_BLACK), (2, CELL_EMPTY), (3, CELL_BLACK), (4, CELL_EMPTY)],
 ];
 
-const DEPTH: i16 = 4;
+const DEPTH: i16 = 3;
 const SCORE_CAP: i32 = 200;
 const SCORE_ALIGN_1: i32 = 1;
 const SCORE_ALIGN_2: i32 = 10;
@@ -573,7 +573,6 @@ fn nega_max(
         lpos_score.push((XY { x: *x, y: *y }, scoring_ordoring(grd, player, XY { x: *x, y: *y })))
     }
     lpos_score.sort_by_key(|k| k.1);
-
 
     for (XY { x, y }, _) in lpos_score.iter().rev() {
         cp = *grd;
