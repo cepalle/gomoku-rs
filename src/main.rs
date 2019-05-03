@@ -609,7 +609,6 @@ fn nega_max(
             return (XY { x: 0, y: 0 }, -score_end);
         }
     }
-    // need move
     if let Some(p) = check_end_grd(grd, nb_cap_white, nb_cap_black, player) {
         if p == player {
             return (XY { x: 0, y: 0 }, score_end);
@@ -681,9 +680,9 @@ fn nega_max(
     if depth == DEPTH {
         loop {
             let (tx1, rx1) = mpsc::channel();
-            let (tx2, rx2) = mpsc::channel();
-            let (tx3, rx3) = mpsc::channel();
-            let (tx4, rx4) = mpsc::channel();
+            let tx2 = mpsc::Sender::clone(&tx1);
+            let tx3 = mpsc::Sender::clone(&tx1);
+            let tx4 = mpsc::Sender::clone(&tx1);
 
             let spos1 = lpos_score.pop();
             let spos2 = lpos_score.pop();
@@ -708,9 +707,9 @@ fn nega_max(
             });
 
             let score1 = rx1.recv().unwrap();
-            let score2 = rx2.recv().unwrap();
-            let score3 = rx3.recv().unwrap();
-            let score4 = rx4.recv().unwrap();
+            let score2 = rx1.recv().unwrap();
+            let score3 = rx1.recv().unwrap();
+            let score4 = rx1.recv().unwrap();
 
             if let Some(posc) = score1 {
                 if posc.1 > to_find.1 {
