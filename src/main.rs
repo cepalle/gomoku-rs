@@ -326,22 +326,24 @@ fn check_end_grd(
         Player::Black => nb_cap_black,
     };
 
-    let mut cp_grd: [[i8; GRID_SIZE]; GRID_SIZE];
-    for y in 0..GRID_SIZE {
-        for x in 0..GRID_SIZE {
-            if !valid[y][x] {
-                continue;
-            }
-            cp_grd = *grd;
-            let nb_del = delcap(&mut cp_grd, XY { x: x as i16, y: y as i16 }, player);
-            if nb_del == 0 {
-                continue;
-            }
-            if nb_cap_player + nb_del >= 10 {
-                return None;
-            }
-            if !check_align_5p(&cp_grd, player_to_i8(next_player(player))) {
-                return None;
+    {
+        let mut cp_grd: [[i8; GRID_SIZE]; GRID_SIZE];
+        for y in 0..GRID_SIZE {
+            for x in 0..GRID_SIZE {
+                if !valid[y][x] {
+                    continue;
+                }
+                cp_grd = *grd;
+                let nb_del = delcap(&mut cp_grd, XY { x: x as i16, y: y as i16 }, player);
+                if nb_del == 0 {
+                    continue;
+                }
+                if nb_cap_player + nb_del >= 10 {
+                    return None;
+                }
+                if !check_align_5p(&cp_grd, player_to_i8(next_player(player))) {
+                    return None;
+                }
             }
         }
     }
