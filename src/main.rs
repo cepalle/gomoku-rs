@@ -413,7 +413,7 @@ fn scoring_ordoring(grd: &[[i8; GRID_SIZE]; GRID_SIZE], p: XY<i16>) -> i32 {
             }
             nba += 1;
         }
-        nba as i32
+        (nba - 1) as i32
     }
 
     for i in 0..(NB_DIR / 2) {
@@ -435,6 +435,31 @@ fn scoring_align(grd: &[[i8; GRID_SIZE]; GRID_SIZE], player: Player) -> i32 {
     let mut score: i32 = 0;
     let c = player_to_i8(player);
 
+    fn check_can_deploy(grd: &[[i8; GRID_SIZE]; GRID_SIZE], p: XY<i16>, pprev: XY<i16>, c: i8) -> bool {
+        let XY { x, y } = pprev;
+        let dx = p.x - pprev.x;
+        let dy = p.y - pprev.y;
+
+        let mut nba1: i16 = 1;
+        loop {
+            if !(check_pos(grd, XY { x: x + dx * nba1, y: y + dy * nba1 }, c) ||
+                check_pos(grd, XY { x: x + dx * nba1, y: y + dy * nba1 }, CELL_EMPTY)) {
+                break;
+            }
+            nba1 += 1;
+        }
+
+        let mut nba2: i16 = 0;
+        loop {
+            if !(check_pos(grd, XY { x: x - dx * nba2, y: y - dy * nba2 }, c) ||
+                check_pos(grd, XY { x: x - dx * nba2, y: y - dy * nba2 }, CELL_EMPTY)) {
+                break;
+            }
+            nba2 += 1;
+        }
+
+        nba1 + nba2 - 2 >= 5
+    }
 
     fn boubou(f: fn(usize, usize) -> XY<i16>, score: &mut i32, c: i8, grd: &[[i8; GRID_SIZE]; GRID_SIZE]) {
         let mut nba: i32;
@@ -449,13 +474,29 @@ fn scoring_align(grd: &[[i8; GRID_SIZE]; GRID_SIZE], player: Player) -> i32 {
                 if check_pos(grd, p, c) {
                     nba += 1;
                 } else if check_pos(grd, p, CELL_EMPTY) {
-                    let ds = nba_to_score(nba);
-                    *score += if last_bad_empty { ds * 2 } else { ds };
+                    let mut ds = nba_to_score(nba);
+                    if nba >= 3 {
+                        if last_bad_empty {
+                            ds *= 2;
+                        }
+                        if !check_can_deploy(grd, p, f(x, y - 1), c) {
+                            ds /= 10;
+                        }
+                    }
+                    *score += ds;
                     nba = 0;
                     last_bad_empty = true;
                 } else {
-                    let ds = nba_to_score(nba);
-                    *score += if last_bad_empty { ds } else { ds / 2 };
+                    let mut ds = nba_to_score(nba);
+                    if nba >= 3 {
+                        if !last_bad_empty {
+                            ds /= 2;
+                        }
+                        if !check_can_deploy(grd, p, f(x, y - 1), c) {
+                            ds /= 10;
+                        }
+                    }
+                    *score += ds;
                     nba = 0;
                     last_bad_empty = false;
                 }
