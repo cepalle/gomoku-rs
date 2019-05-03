@@ -156,7 +156,7 @@ fn del_double_three(grd: &[[i8; GRID_SIZE]; GRID_SIZE], vld: &mut [[bool; GRID_S
         }
 
         let mut nb_double = 0;
-        for i in 0..4 {
+        for i in 0..(NB_DIR / 2) {
             if dir_match[i * 2] || dir_match[i * 2 + 1] {
                 nb_double += 1;
             }
@@ -319,16 +319,16 @@ fn check_end_grd(
     if !check_align_5p(grd, player_to_i8(next_player(player))) {
         return None;
     }
-    let mut valid = empty_pos(grd);
-    del_double_three(grd, &mut valid, player_to_i8(player));
-
-    let nb_cap_player = match player {
-        Player::White => nb_cap_white,
-        Player::Black => nb_cap_black,
-    };
-
     {
+        let mut valid = empty_pos(grd);
         let mut cp_grd: [[i8; GRID_SIZE]; GRID_SIZE];
+        del_double_three(grd, &mut valid, player_to_i8(player));
+
+        let nb_cap_player = match player {
+            Player::White => nb_cap_white,
+            Player::Black => nb_cap_black,
+        };
+
         for y in 0..GRID_SIZE {
             for x in 0..GRID_SIZE {
                 if !valid[y][x] {
