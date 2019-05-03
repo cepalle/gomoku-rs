@@ -54,6 +54,7 @@ const SCORE_ALIGN_5: i32 = 100000;
 
 const INF: i32 = std::i32::MAX / 2;
 const SCORE_MAX: i32 = INF / 2;
+const SCORE_NB_V: i32 = 1;
 
 const CELL_EMPTY: i8 = 0;
 const CELL_WHITE: i8 = 1;
@@ -402,7 +403,7 @@ fn nba_to_score(nba: i32) -> i32 {
     }
 }
 
-fn scoring_ordoring(grd: &[[i8; GRID_SIZE]; GRID_SIZE], p: XY<i16>) -> i32 {
+fn scoring_ordoring(grd: &[[i8; GRID_SIZE]; GRID_SIZE], p: XY<i16>, player: Player) -> i32 {
     let mut score: i32 = 0;
 
     fn check_align(grd: &[[i8; GRID_SIZE]; GRID_SIZE], XY { x, y }: XY<i16>, (dx, dy): (i16, i16), c: i8) -> i32 {
@@ -427,6 +428,19 @@ fn scoring_ordoring(grd: &[[i8; GRID_SIZE]; GRID_SIZE], p: XY<i16>) -> i32 {
         score += (countcap(grd, p, Player::Black) as i32) * SCORE_CAP;
         score += (countcap(grd, p, Player::White) as i32) * SCORE_CAP;
     }
+
+    let mut nb_v = 0;
+    for i in 0..NB_DIR {
+        let (dx, dy) = ALL_DIR[i];
+
+        if check_pos(grd, XY { x: p.x + dx, y: p.y + dy }, player_to_i8(player)) {
+            nb_v += 2;
+        }
+        if check_pos(grd, XY { x: p.x + dx, y: p.y + dy }, player_to_i8(next_player(player))) {
+            nb_v += 1;
+        }
+    }
+    score += nb_v * SCORE_NB_V;
 
     score
 }
@@ -613,7 +627,7 @@ fn nega_max(
 
         let mut lpos_score: Vec<(XY<i16>, i32)> = Vec::new();
         for XY { x, y } in lpos.iter() {
-            lpos_score.push((XY { x: *x, y: *y }, scoring_ordoring(grd, XY { x: *x, y: *y })))
+            lpos_score.push((XY { x: *x, y: *y }, scoring_ordoring(grd, XY { x: *x, y: *y }, player)))
         }
         lpos_score.sort_by_key(|k| k.1);
         lpos_score.reverse();
