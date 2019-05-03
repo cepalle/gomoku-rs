@@ -417,10 +417,10 @@ fn scoring_ordoring(grd: &[[i8; GRID_SIZE]; GRID_SIZE], p: XY<i16>, player: Play
     }
 
     for i in 0..(NB_DIR / 2) {
-        let ab = 1 + check_align(grd, p, ALL_DIR[i], CELL_BLACK)
-            + check_align(grd, p, ALL_DIR[i + 1], CELL_BLACK);
-        let aw = 1 + check_align(grd, p, ALL_DIR[i], CELL_WHITE)
-            + check_align(grd, p, ALL_DIR[i + 1], CELL_WHITE);
+        let ab = 1 + check_align(grd, p, ALL_DIR[i * 2], CELL_BLACK)
+            + check_align(grd, p, ALL_DIR[i * 2 + 1], CELL_BLACK);
+        let aw = 1 + check_align(grd, p, ALL_DIR[i * 2], CELL_WHITE)
+            + check_align(grd, p, ALL_DIR[i * 2 + 1], CELL_WHITE);
 
         score += nba_to_score(ab);
         score += nba_to_score(aw);
@@ -474,7 +474,7 @@ fn scoring_align(grd: &[[i8; GRID_SIZE]; GRID_SIZE], player: Player) -> i32 {
         nba1 + nba2 - 2 >= 5
     }
 
-    fn boubou(f: fn(usize, usize) -> XY<i16>, score: &mut i32, c: i8, grd: &[[i8; GRID_SIZE]; GRID_SIZE]) {
+    fn score_for(f: fn(usize, usize) -> XY<i16>, score: &mut i32, c: i8, grd: &[[i8; GRID_SIZE]; GRID_SIZE]) {
         let mut nba: i32;
         let mut last_bad_empty: bool;
 
@@ -536,12 +536,12 @@ fn scoring_align(grd: &[[i8; GRID_SIZE]; GRID_SIZE], player: Player) -> i32 {
         XY { x: (GRID_SIZE as i16) - 1 - (y as i16), y: (x + y) as i16 }
     }
 
-    boubou(b1, &mut score, c, grd);
-    boubou(b2, &mut score, c, grd);
-    boubou(b3, &mut score, c, grd);
-    boubou(b4, &mut score, c, grd);
-    boubou(b5, &mut score, c, grd);
-    boubou(b6, &mut score, c, grd);
+    score_for(b1, &mut score, c, grd);
+    score_for(b2, &mut score, c, grd);
+    score_for(b3, &mut score, c, grd);
+    score_for(b4, &mut score, c, grd);
+    score_for(b5, &mut score, c, grd);
+    score_for(b6, &mut score, c, grd);
 
     score
 }
