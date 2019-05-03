@@ -980,10 +980,24 @@ impl cursive::view::View for GameView {
 
         if let Some(end) = self.end {
             match end {
-                None => print_tmp(printer, (0, 8), "Draw"),
-                Some(p) => print_tmp(printer, (0, 8), &format!("Player {} win!", player_to_str(p))[..]),
+                None => printer.with_color(
+                    ColorStyle::new(Color::Rgb(200, 200, 200), Color::RgbLowRes(0, 0, 5)),
+                    |printer| printer.print((0, 8), "Draw"),
+                ),
+                Some(Player::Black) => printer.with_color(
+                    ColorStyle::new(Color::Rgb(255, 255, 255), Color::RgbLowRes(0, 0, 0)),
+                    |printer| printer.print((0, 8), "Player black win!"),
+                ),
+                Some(Player::White) => printer.with_color(
+                    ColorStyle::new(Color::Rgb(0, 0, 0), Color::RgbLowRes(5, 5, 5)),
+                    |printer| printer.print((0, 8), "Player white win!")),
             }
         }
+
+        print_tmp(printer, (0, 12), "Mouse left:");
+        print_tmp(printer, (1, 13), "Pose a piece");
+        print_tmp(printer, (0, 14), "Mouse middle:");
+        print_tmp(printer, (1, 15), "IA Suggestion");
     }
 
     fn required_size(&mut self, _: Vec2) -> Vec2 {
