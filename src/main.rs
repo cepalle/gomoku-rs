@@ -42,8 +42,6 @@ const MEMO_MASK_BLACK: [[(i16, i8); LEN_MASK]; NB_MASK] = [
 
 const DEPTH: i16 = 5;
 const DEPTH_MALUS: i32 = 100;
-//const LEN_LPOS_MAX_MALUS_DEPTH: usize = 600;
-//const LEN_LPOS_MAX: usize = 16;
 
 const SCORE_CAP: i32 = 200;
 const SCORE_ALIGN_1: i32 = 1;
@@ -54,8 +52,7 @@ const SCORE_ALIGN_5: i32 = 1000000;
 
 const INF: i32 = std::i32::MAX / 2;
 const SCORE_MAX: i32 = INF / 2;
-const SCORE_BREAK: i32 = SCORE_MAX / 2;
-const SCORE_BREAK_BEGIN: i32 = SCORE_ALIGN_5 / 2;
+const SCORE_BREAK: i32 = SCORE_ALIGN_5 / 2;
 const SCORE_NB_V: i32 = 1;
 
 const CELL_EMPTY: i8 = 0;
@@ -634,12 +631,6 @@ fn nega_max(
         lpos_score.sort_by_key(|k| k.1);
         lpos_score.reverse();
 
-        /*
-        let len_lpos = LEN_LPOS_MAX - ((DEPTH - depth) as usize) * LEN_LPOS_MAX_MALUS_DEPTH;
-        while lpos_score.len() > len_lpos {
-            lpos_score.pop();
-        }
-        */
         lpos_score
     };
 
@@ -665,16 +656,7 @@ fn nega_max(
             to_find = (XY { x: *x, y: *y }, ss);
         }
         alpha_mut = alpha_mut.max(ss);
-        if alpha_mut >= beta {
-            break;
-        }
-        if ss > SCORE_BREAK {
-            break;
-        }
-        if nb_cap_black.max(nb_cap_white) < 6 && ss > SCORE_BREAK_BEGIN {
-            break;
-        }
-        if nb_cap_black.max(nb_cap_white) < 6 && *sco > SCORE_BREAK_BEGIN {
+        if alpha_mut >= beta || ss > SCORE_BREAK {
             break;
         }
     }
