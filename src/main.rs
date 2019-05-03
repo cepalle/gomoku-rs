@@ -628,8 +628,8 @@ fn nega_max(
         let lpos = valid_to_pos(&valid);
 
         let mut lpos_score: Vec<(XY<i16>, i32)> = Vec::new();
-        for XY { x, y } in lpos.iter() {
-            lpos_score.push((XY { x: *x, y: *y }, scoring_ordoring(grd, XY { x: *x, y: *y }, player)))
+        for p in lpos.iter() {
+            lpos_score.push((*p, scoring_ordoring(grd, *p, player)))
         }
         lpos_score.sort_by_key(|k| k.1);
         lpos_score.reverse();
@@ -678,6 +678,7 @@ fn nega_max(
     }
 
     if depth == DEPTH {
+        lpos_score.reverse();
         loop {
             let (tx1, rx1) = mpsc::channel();
             let tx2 = mpsc::Sender::clone(&tx1);
