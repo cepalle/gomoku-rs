@@ -652,12 +652,12 @@ fn nega_max(
         player: Player,
         spos: Option<(XY<i16>, i32)>,
     ) -> Option<(XY<i16>, i32)> {
-        if let Some(pos) = spos {
-            let (XY { x, y }, _) = pos;
+        if let Some(posc) = spos {
+            let (pos, _) = posc;
 
             let mut cp = grd;
-            cp[y as usize][x as usize] = player_to_i8(player);
-            let cap = delcap(&mut cp, XY { x: x, y: y }, player);
+            cp[pos.y as usize][pos.x as usize] = player_to_i8(player);
+            let cap = delcap(&mut cp, pos, player);
 
             let ss = {
                 let (_, s) = nega_max(
@@ -672,7 +672,7 @@ fn nega_max(
                 -s
             };
 
-            return Some((XY { x, y }, ss));
+            return Some((pos, ss));
         }
 
         None
@@ -712,41 +712,38 @@ fn nega_max(
             let score3 = rx3.recv().unwrap();
             let score4 = rx4.recv().unwrap();
 
-            if let Some((p, s)) = score1 {
-                if s > to_find.1 {
-                    to_find = (p, s);
-                    alpha_mut = alpha_mut.max(s);
+            if let Some(posc) = score1 {
+                if posc.1 > to_find.1 {
+                    to_find = posc;
                 }
             }
-            if let Some((p, s)) = score2 {
-                if s > to_find.1 {
-                    to_find = (p, s);
-                    alpha_mut = alpha_mut.max(s);
+            if let Some(posc) = score2 {
+                if posc.1 > to_find.1 {
+                    to_find = posc;
                 }
             }
-            if let Some((p, s)) = score3 {
-                if s > to_find.1 {
-                    to_find = (p, s);
-                    alpha_mut = alpha_mut.max(s);
+            if let Some(posc) = score3 {
+                if posc.1 > to_find.1 {
+                    to_find = posc;
                 }
             }
-            if let Some((p, s)) = score4 {
-                if s > to_find.1 {
-                    to_find = (p, s);
-                    alpha_mut = alpha_mut.max(s);
+            if let Some(posc) = score4 {
+                if posc.1 > to_find.1 {
+                    to_find = posc;
                 }
             }
 
+            alpha_mut = alpha_mut.max(to_find.1);
             if alpha_mut >= beta || to_find.1 > SCORE_BREAK {
                 break;
             }
         }
     } else {
         let mut cp: [[i8; GRID_SIZE]; GRID_SIZE];
-        for (XY { x, y }, _) in lpos_score.iter() {
+        for (pos, _) in lpos_score.iter() {
             cp = *grd;
-            cp[*y as usize][*x as usize] = player_to_i8(player);
-            let cap = delcap(&mut cp, XY { x: *x, y: *y }, player);
+            cp[pos.y as usize][pos.x as usize] = player_to_i8(player);
+            let cap = delcap(&mut cp, *pos, player);
 
             let ss = {
                 let (_, s) = nega_max(
@@ -761,10 +758,10 @@ fn nega_max(
                 -s
             };
             if ss > to_find.1 {
-                to_find = (XY { x: *x, y: *y }, ss);
+                to_find = (*pos, ss);
             }
-            alpha_mut = alpha_mut.max(ss);
-            if alpha_mut >= beta || ss > SCORE_BREAK {
+            alpha_mut = alpha_mut.max(to_find.1);
+            if alpha_mut >= beta || to_find.1 > SCORE_BREAK {
                 break;
             }
         }
