@@ -588,7 +588,6 @@ fn nega_max(
 ) -> (XY<i16>, i32) {
     let mut alpha_mut = alpha;
     let mut to_find: (XY<i16>, i32) = (XY { x: (GRID_SIZE / 2) as i16, y: (GRID_SIZE / 2) as i16 }, -INF);
-    let mut cp: [[i8; GRID_SIZE]; GRID_SIZE];
 
     let score_end: i32 = SCORE_MAX + (depth as i32) * DEPTH_MALUS;
     if nb_cap_black >= 10 {
@@ -634,30 +633,32 @@ fn nega_max(
         lpos_score
     };
 
+    {
+        let mut cp: [[i8; GRID_SIZE]; GRID_SIZE];
+        for (XY { x, y }, _) in lpos_score.iter() {
+            cp = *grd;
+            cp[*y as usize][*x as usize] = player_to_i8(player);
+            let cap = delcap(&mut cp, XY { x: *x, y: *y }, player);
 
-    for (XY { x, y }, _) in lpos_score.iter() {
-        cp = *grd;
-        cp[*y as usize][*x as usize] = player_to_i8(player);
-        let cap = delcap(&mut cp, XY { x: *x, y: *y }, player);
-
-        let ss = {
-            let (_, s) = nega_max(
-                &cp,
-                if player == Player::White { nb_cap_white + cap } else { nb_cap_white },
-                if player == Player::Black { nb_cap_black + cap } else { nb_cap_black },
-                depth - 1,
-                -beta,
-                -alpha_mut,
-                next_player(player),
-            );
-            -s
-        };
-        if ss > to_find.1 {
-            to_find = (XY { x: *x, y: *y }, ss);
-        }
-        alpha_mut = alpha_mut.max(ss);
-        if alpha_mut >= beta || ss > SCORE_BREAK {
-            break;
+            let ss = {
+                let (_, s) = nega_max(
+                    &cp,
+                    if player == Player::White { nb_cap_white + cap } else { nb_cap_white },
+                    if player == Player::Black { nb_cap_black + cap } else { nb_cap_black },
+                    depth - 1,
+                    -beta,
+                    -alpha_mut,
+                    next_player(player),
+                );
+                -s
+            };
+            if ss > to_find.1 {
+                to_find = (XY { x: *x, y: *y }, ss);
+            }
+            alpha_mut = alpha_mut.max(ss);
+            if alpha_mut >= beta || ss > SCORE_BREAK {
+                break;
+            }
         }
     }
 
