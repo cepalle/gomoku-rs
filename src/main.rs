@@ -44,7 +44,7 @@ const MEMO_MASK_BLACK: [[(i16, i8); LEN_MASK]; NB_MASK] = [
 
 const DEPTH: i16 = 5;
 const DEPTH_MALUS: i32 = 100;
-const LEN_MAX_LPOS: usize = 400;
+const LEN_MAX_LPOS: usize = 16;
 
 const SCORE_CAP: i32 = 200;
 const SCORE_ALIGN_1: i32 = 1;
@@ -715,25 +715,28 @@ fn nega_max(
             if let Some((p, s)) = score1 {
                 if s > to_find.1 {
                     to_find = (p, s);
+                    alpha_mut = alpha_mut.max(s);
                 }
             }
             if let Some((p, s)) = score2 {
                 if s > to_find.1 {
                     to_find = (p, s);
+                    alpha_mut = alpha_mut.max(s);
                 }
             }
             if let Some((p, s)) = score3 {
                 if s > to_find.1 {
                     to_find = (p, s);
+                    alpha_mut = alpha_mut.max(s);
                 }
             }
             if let Some((p, s)) = score4 {
                 if s > to_find.1 {
                     to_find = (p, s);
+                    alpha_mut = alpha_mut.max(s);
                 }
             }
 
-            alpha_mut = alpha_mut.max(to_find.1);
             if alpha_mut >= beta || to_find.1 > SCORE_BREAK {
                 break;
             }
