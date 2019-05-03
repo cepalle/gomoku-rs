@@ -7,6 +7,8 @@ use cursive::vec::Vec2;
 use cursive::event::{Event, EventResult, MouseEvent, MouseButton, Callback};
 use cursive::direction::Direction;
 use std::time::SystemTime;
+use std::sync::mpsc;
+use std::thread;
 
 const GRID_SIZE: usize = 19;
 const LEN_CELL: usize = 3;
@@ -42,7 +44,7 @@ const MEMO_MASK_BLACK: [[(i16, i8); LEN_MASK]; NB_MASK] = [
 
 const DEPTH: i16 = 5;
 const DEPTH_MALUS: i32 = 100;
-const LEN_MAX_LPOS: usize = 16;
+const LEN_MAX_LPOS: usize = 400;
 
 const SCORE_CAP: i32 = 200;
 const SCORE_ALIGN_1: i32 = 1;
@@ -620,7 +622,7 @@ fn nega_max(
     }
 
 
-    let lpos_score: Vec<(XY<i16>, i32)> = {
+    let mut lpos_score: Vec<(XY<i16>, i32)> = {
         let mut valid = empty_pos(&grd);
         valid = del_dist_1(&valid);
         del_double_three(&grd, &mut valid, player_to_i8(player));
@@ -640,7 +642,103 @@ fn nega_max(
         lpos_score
     };
 
-    {
+    fn nega_par(
+        grd: [[i8; GRID_SIZE]; GRID_SIZE],
+        nb_cap_white: i16,
+        nb_cap_black: i16,
+        depth: i16,
+        alpha: i32,
+        beta: i32,
+        player: Player,
+        spos: Option<(XY<i16>, i32)>,
+    ) -> Option<(XY<i16>, i32)> {
+        if let Some(pos) = spos {
+            let (XY { x, y }, _) = pos;
+
+            let mut cp = grd;
+            cp[y as usize][x as usize] = player_to_i8(player);
+            let cap = delcap(&mut cp, XY { x: x, y: y }, player);
+
+            let ss = {
+                let (_, s) = nega_max(
+                    &cp,
+                    if player == Player::White { nb_cap_white + cap } else { nb_cap_white },
+                    if player == Player::Black { nb_cap_black + cap } else { nb_cap_black },
+                    depth - 1,
+                    -beta,
+                    -alpha,
+                    next_player(player),
+                );
+                -s
+            };
+
+            return Some((XY { x, y }, ss));
+        }
+
+        None
+    }
+
+    if depth == DEPTH {
+        loop {
+            let (tx1, rx1) = mpsc::channel();
+            let (tx2, rx2) = mpsc::channel();
+            let (tx3, rx3) = mpsc::channel();
+            let (tx4, rx4) = mpsc::channel();
+
+            let spos1 = lpos_score.pop();
+            let spos2 = lpos_score.pop();
+            let spos3 = lpos_score.pop();
+            let spos4 = lpos_score.pop();
+
+            if let None = spos1 {
+                break;
+            }
+            let cp = *grd;
+            thread::spawn(move || {
+                tx1.send(nega_par(cp, nb_cap_white, nb_cap_black, depth, alpha_mut, beta, player, spos1)).unwrap();
+            });
+            thread::spawn(move || {
+                tx2.send(nega_par(cp, nb_cap_white, nb_cap_black, depth, alpha_mut, beta, player, spos2)).unwrap();
+            });
+            thread::spawn(move || {
+                tx3.send(nega_par(cp, nb_cap_white, nb_cap_black, depth, alpha_mut, beta, player, spos3)).unwrap();
+            });
+            thread::spawn(move || {
+                tx4.send(nega_par(cp, nb_cap_white, nb_cap_black, depth, alpha_mut, beta, player, spos4)).unwrap();
+            });
+
+            let score1 = rx1.recv().unwrap();
+            let score2 = rx2.recv().unwrap();
+            let score3 = rx3.recv().unwrap();
+            let score4 = rx4.recv().unwrap();
+
+            if let Some((p, s)) = score1 {
+                if s > to_find.1 {
+                    to_find = (p, s);
+                }
+            }
+            if let Some((p, s)) = score2 {
+                if s > to_find.1 {
+                    to_find = (p, s);
+                }
+            }
+            if let Some((p, s)) = score3 {
+                if s > to_find.1 {
+                    to_find = (p, s);
+                }
+            }
+            if let Some((p, s)) = score4 {
+                if s > to_find.1 {
+                    to_find = (p, s);
+                }
+            }
+
+            alpha_mut = alpha_mut.max(to_find.1);
+            if alpha_mut >= beta || to_find.1 > SCORE_BREAK {
+                break;
+            }
+        }
+    } else {
         let mut cp: [[i8; GRID_SIZE]; GRID_SIZE];
         for (XY { x, y }, _) in lpos_score.iter() {
             cp = *grd;
