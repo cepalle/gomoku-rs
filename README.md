@@ -1,21 +1,19 @@
 # GOMOKU
 
-
 ## Dependences
 
 - Rust
 - Cargo
 - ncurses
 
+## Lib
+
+- Cursive
+
 ## Run
 
-build
 ```cmd
 cargo build --release
-```
-
-run
-```cmd
 ./target/release/gomoku-rs
 ```
 
