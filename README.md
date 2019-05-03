@@ -1,6 +1,14 @@
 # GOMOKU
 
 
+## Dependences
+
+- Rust
+- Cargo
+- ncurses
+
+## Run
+
 build
 ```cmd
 cargo build --release
