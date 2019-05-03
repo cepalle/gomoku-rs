@@ -40,10 +40,10 @@ const MEMO_MASK_BLACK: [[(i16, i8); LEN_MASK]; NB_MASK] = [
     [(-1, CELL_EMPTY), (0, CELL_EMPTY), (1, CELL_BLACK), (2, CELL_EMPTY), (3, CELL_BLACK), (4, CELL_EMPTY)],
 ];
 
-const DEPTH: i16 = 4;
+const DEPTH: i16 = 5;
 const DEPTH_MALUS: i32 = 100;
 const LEN_LPOS_MAX_MALUS_DEPTH: usize = 600;
-const LEN_LPOS_MAX: usize = (DEPTH as usize + 1) * LEN_LPOS_MAX_MALUS_DEPTH;
+const LEN_LPOS_MAX: usize = (DEPTH as usize) * LEN_LPOS_MAX_MALUS_DEPTH;
 
 const SCORE_CAP: i32 = 200;
 const SCORE_ALIGN_1: i32 = 1;
@@ -642,7 +642,7 @@ fn nega_max(
     };
 
 
-    for (XY { x, y }, _) in lpos_score.iter() {
+    for (XY { x, y }, sco) in lpos_score.iter() {
         cp = *grd;
         cp[*y as usize][*x as usize] = player_to_i8(player);
         let cap = delcap(&mut cp, XY { x: *x, y: *y }, player);
@@ -670,6 +670,9 @@ fn nega_max(
             break;
         }
         if nb_cap_black.max(nb_cap_white) < 6 && ss > SCORE_BREAK_BEGIN {
+            break;
+        }
+        if nb_cap_black.max(nb_cap_white) < 6 && *sco > SCORE_BREAK_BEGIN {
             break;
         }
     }
