@@ -50,10 +50,12 @@ const SCORE_ALIGN_1: i32 = 1;
 const SCORE_ALIGN_2: i32 = 10;
 const SCORE_ALIGN_3: i32 = 100;
 const SCORE_ALIGN_4: i32 = 1000;
-const SCORE_ALIGN_5: i32 = 100000;
+const SCORE_ALIGN_5: i32 = 1000000;
 
 const INF: i32 = std::i32::MAX / 2;
 const SCORE_MAX: i32 = INF / 2;
+const SCORE_BREAK: i32 = SCORE_MAX / 2;
+const SCORE_BREAK_BEGIN: i32 = SCORE_ALIGN_5 / 2;
 const SCORE_NB_V: i32 = 1;
 
 const CELL_EMPTY: i8 = 0;
@@ -662,6 +664,12 @@ fn nega_max(
         }
         alpha_mut = alpha_mut.max(ss);
         if alpha_mut >= beta {
+            break;
+        }
+        if ss > SCORE_BREAK {
+            break;
+        }
+        if nb_cap_black.max(nb_cap_white) < 6 && ss > SCORE_BREAK_BEGIN {
             break;
         }
     }
