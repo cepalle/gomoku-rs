@@ -635,7 +635,7 @@ fn nega_max(
     };
 
 
-    for (XY { x, y }, sco) in lpos_score.iter() {
+    for (XY { x, y }, _) in lpos_score.iter() {
         cp = *grd;
         cp[*y as usize][*x as usize] = player_to_i8(player);
         let cap = delcap(&mut cp, XY { x: *x, y: *y }, player);
@@ -688,16 +688,16 @@ impl GameView {
         gv
     }
 
-    pub fn handle_player_play(&mut self, p: XY<i16>) {
+    pub fn handle_player_play(&mut self, p: XY<i16>) -> bool {
         self.cursor_suggestion = None;
         if self.end != None {
-            return;
+            return false;
         }
 
         let mut valid = empty_pos(&self.go_grid);
         del_double_three(&self.go_grid, &mut valid, player_to_i8(self.player_turn));
         if !valid[p.y as usize][p.x as usize] {
-            return;
+            return false;
         }
 
         self.go_grid[p.y as usize][p.x as usize] = player_to_i8(self.player_turn);
@@ -714,16 +714,17 @@ impl GameView {
 
         if self.nb_cap_black >= 10 {
             self.end = Some(Some(Player::Black));
-            return;
+            return true;
         }
         if self.nb_cap_white >= 10 {
             self.end = Some(Some(Player::White));
-            return;
+            return true;
         }
         if let Some(p) = check_end_grd(&self.go_grid, self.nb_cap_white, self.nb_cap_black, self.player_turn) {
             self.end = Some(Some(p));
-            return;
+            return true;
         }
+        true
     }
 
     pub fn handle_ia_play(&mut self) {
@@ -907,9 +908,10 @@ impl cursive::view::View for GameView {
                                 }
                             }));
 
+                        let mut b = false;
                         if let Some(p) = pos {
                             if p.y < GRID_SIZE && p.x < GRID_SIZE {
-                                self.handle_player_play(XY { x: p.x as i16, y: p.y as i16 });
+                                b = self.handle_player_play(XY { x: p.x as i16, y: p.y as i16 });
                             }
                         }
 
@@ -917,7 +919,10 @@ impl cursive::view::View for GameView {
                         if let GameMode::Multi = self.game_mode {
                             return EventResult::Ignored;
                         }
-                        return EventResult::Consumed(Some(Callback::from_fn(cb_ia)));
+                        if b {
+                            return EventResult::Consumed(Some(Callback::from_fn(cb_ia)));
+                        }
+                        return EventResult::Ignored;
                     }
                     _ => ()
                 }
