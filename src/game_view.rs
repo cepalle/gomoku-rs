@@ -41,7 +41,7 @@ const MEMO_MASK_BLACK: [[(i16, i8); LEN_MASK]; NB_MASK] = [
 
 const DEPTH: i16 = 6;
 const DEPTH_MALUS: i32 = 100;
-const LEN_MAX_LPOS: usize = 15;
+const LEN_MAX_LPOS: usize = 14;
 const DEPTH_MALUS_LEN_LPOS_MAX: usize = 2;
 
 const SCORE_CAP: i32 = 200;
@@ -510,7 +510,7 @@ fn scoring_align(grd: &[[i8; GRID_SIZE]; GRID_SIZE], player: Player) -> i32 {
                             ds *= 2;
                         }
                         if !check_can_deploy(grd, p, f(x, y - 1), c) {
-                            ds /= 10;
+                            ds /= 22;
                         }
                     }
                     *score += ds;
@@ -523,7 +523,7 @@ fn scoring_align(grd: &[[i8; GRID_SIZE]; GRID_SIZE], player: Player) -> i32 {
                             ds /= 2;
                         }
                         if !check_can_deploy(grd, p, f(x, y - 1), c) {
-                            ds /= 10;
+                            ds /= 22;
                         }
                     }
                     *score += ds;
