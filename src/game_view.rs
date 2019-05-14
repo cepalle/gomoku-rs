@@ -312,13 +312,27 @@ fn check_end_grd(
     nb_cap_white: i16,
     nb_cap_black: i16,
     player: Player,
+    last_move: Option<XY<i16>>,
 ) -> Option<Player> {
     if check_align_5p(grd, player_to_i8(player)) {
         return Some(player);
     }
-    if !check_align_5p(grd, player_to_i8(next_player(player))) {
+    if let Some(p) = last_move {
+        let mut find = false;
+        for i in 0..(NB_DIR / 2) {
+            let nba = 1 + check_align_local(grd, p, ALL_DIR[i * 2], player_to_i8(next_player(player)))
+                + check_align_local(grd, p, ALL_DIR[i * 2 + 1], player_to_i8(next_player(player)));
+            if nba >= 5 {
+                find = true;
+            }
+        }
+        if !find {
+            return None;
+        }
+    } else if !check_align_5p(grd, player_to_i8(next_player(player))) {
         return None;
     }
+
     {
         let mut valid = empty_pos(grd);
         let mut cp_grd: [[i8; GRID_SIZE]; GRID_SIZE];
@@ -405,25 +419,25 @@ fn nba_to_score(nba: i32) -> i32 {
     }
 }
 
+fn check_align_local(grd: &[[i8; GRID_SIZE]; GRID_SIZE], XY { x, y }: XY<i16>, (dx, dy): (i16, i16), c: i8) -> i32 {
+    let mut nba: i16 = 1;
+    loop {
+        if !check_pos(grd, XY { x: x + dx * nba, y: y + dy * nba }, c) {
+            break;
+        }
+        nba += 1;
+    }
+    (nba - 1) as i32
+}
+
 fn scoring_ordoring(grd: &[[i8; GRID_SIZE]; GRID_SIZE], p: XY<i16>, player: Player) -> i32 {
     let mut score: i32 = 0;
 
-    fn check_align(grd: &[[i8; GRID_SIZE]; GRID_SIZE], XY { x, y }: XY<i16>, (dx, dy): (i16, i16), c: i8) -> i32 {
-        let mut nba: i16 = 1;
-        loop {
-            if !check_pos(grd, XY { x: x + dx * nba, y: y + dy * nba }, c) {
-                break;
-            }
-            nba += 1;
-        }
-        (nba - 1) as i32
-    }
-
     for i in 0..(NB_DIR / 2) {
-        let ab = 1 + check_align(grd, p, ALL_DIR[i * 2], CELL_BLACK)
-            + check_align(grd, p, ALL_DIR[i * 2 + 1], CELL_BLACK);
-        let aw = 1 + check_align(grd, p, ALL_DIR[i * 2], CELL_WHITE)
-            + check_align(grd, p, ALL_DIR[i * 2 + 1], CELL_WHITE);
+        let ab = 1 + check_align_local(grd, p, ALL_DIR[i * 2], CELL_BLACK)
+            + check_align_local(grd, p, ALL_DIR[i * 2 + 1], CELL_BLACK);
+        let aw = 1 + check_align_local(grd, p, ALL_DIR[i * 2], CELL_WHITE)
+            + check_align_local(grd, p, ALL_DIR[i * 2 + 1], CELL_WHITE);
 
         score += nba_to_score(ab);
         score += nba_to_score(aw);
@@ -588,6 +602,7 @@ fn nega_max(
     alpha: i32,
     beta: i32,
     player: Player,
+    last_move: Option<XY<i16>>,
 ) -> (XY<i16>, i32) {
     let mut alpha_mut = alpha;
     let mut to_find: (XY<i16>, i32) = (XY { x: (GRID_SIZE / 2) as i16, y: (GRID_SIZE / 2) as i16 }, -INF);
@@ -607,7 +622,7 @@ fn nega_max(
             return (XY { x: 0, y: 0 }, -score_end);
         }
     }
-    if let Some(p) = check_end_grd(grd, nb_cap_white, nb_cap_black, player) {
+    if let Some(p) = check_end_grd(grd, nb_cap_white, nb_cap_black, player, last_move) {
         if p == player {
             return (XY { x: 0, y: 0 }, score_end);
         } else {
@@ -666,6 +681,7 @@ fn nega_max(
                     -beta,
                     -alpha,
                     next_player(player),
+                    Some(pos),
                 );
                 -s
             };
@@ -753,6 +769,7 @@ fn nega_max(
                     -beta,
                     -alpha_mut,
                     next_player(player),
+                    Some(*pos),
                 );
                 -s
             };
@@ -825,7 +842,7 @@ impl GameView {
             self.end = Some(Some(Player::White));
             return false;
         }
-        if let Some(p) = check_end_grd(&self.go_grid, self.nb_cap_white, self.nb_cap_black, self.player_turn) {
+        if let Some(p) = check_end_grd(&self.go_grid, self.nb_cap_white, self.nb_cap_black, self.player_turn, None) {
             self.end = Some(Some(p));
             return false;
         }
@@ -848,6 +865,7 @@ impl GameView {
             -INF,
             INF,
             self.player_turn,
+            None,
         );
 
         match now.elapsed() {
@@ -874,7 +892,7 @@ impl GameView {
             self.end = Some(Some(Player::White));
             return;
         }
-        if let Some(p) = check_end_grd(&self.go_grid, self.nb_cap_white, self.nb_cap_black, self.player_turn) {
+        if let Some(p) = check_end_grd(&self.go_grid, self.nb_cap_white, self.nb_cap_black, self.player_turn, None) {
             self.end = Some(Some(p));
             return;
         }
@@ -894,6 +912,7 @@ impl GameView {
             -INF,
             INF,
             self.player_turn,
+            None,
         );
         match now.elapsed() {
             Ok(d) => self.ia_time = d.as_millis(),
