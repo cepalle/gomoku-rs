@@ -507,7 +507,7 @@ fn scoring_align(grd: &[[i8; GRID_SIZE]; GRID_SIZE], player: Player) -> i32 {
                     let mut ds = nba_to_score(nba);
                     if nba >= 3 {
                         if last_bad_empty {
-                            ds *= 2;
+                            ds *= 9;
                         }
                         if !check_can_deploy(grd, p, f(x, y - 1), c) {
                             ds /= 22;
