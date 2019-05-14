@@ -694,63 +694,80 @@ fn nega_max(
 
     if depth == DEPTH {
         lpos_score.reverse();
+        let cp = *grd;
+        let (tx, rx) = mpsc::channel();
+        let tx1 = mpsc::Sender::clone(&tx);
+        let tx2 = mpsc::Sender::clone(&tx);
+        let tx3 = mpsc::Sender::clone(&tx);
+        let tx4 = mpsc::Sender::clone(&tx);
+
+        let spos1 = lpos_score.pop();
+        let spos2 = lpos_score.pop();
+        let spos3 = lpos_score.pop();
+        let spos4 = lpos_score.pop();
+
+        thread::spawn(move || {
+            tx1.send(nega_par(cp, nb_cap_white, nb_cap_black, depth, alpha_mut, beta, player, spos1)).unwrap();
+        });
+        thread::spawn(move || {
+            tx2.send(nega_par(cp, nb_cap_white, nb_cap_black, depth, alpha_mut, beta, player, spos2)).unwrap();
+        });
+        thread::spawn(move || {
+            tx3.send(nega_par(cp, nb_cap_white, nb_cap_black, depth, alpha_mut, beta, player, spos3)).unwrap();
+        });
+        thread::spawn(move || {
+            tx4.send(nega_par(cp, nb_cap_white, nb_cap_black, depth, alpha_mut, beta, player, spos4)).unwrap();
+        });
+
         loop {
-            let (tx1, rx1) = mpsc::channel();
-            let tx2 = mpsc::Sender::clone(&tx1);
-            let tx3 = mpsc::Sender::clone(&tx1);
-            let tx4 = mpsc::Sender::clone(&tx1);
+            let spos = lpos_score.pop();
 
-            let spos1 = lpos_score.pop();
-            let spos2 = lpos_score.pop();
-            let spos3 = lpos_score.pop();
-            let spos4 = lpos_score.pop();
-
-            if let None = spos1 {
+            if let None = spos {
                 break;
             }
-            let cp = *grd;
-            thread::spawn(move || {
-                tx1.send(nega_par(cp, nb_cap_white, nb_cap_black, depth, alpha_mut, beta, player, spos1)).unwrap();
-            });
-            thread::spawn(move || {
-                tx2.send(nega_par(cp, nb_cap_white, nb_cap_black, depth, alpha_mut, beta, player, spos2)).unwrap();
-            });
-            thread::spawn(move || {
-                tx3.send(nega_par(cp, nb_cap_white, nb_cap_black, depth, alpha_mut, beta, player, spos3)).unwrap();
-            });
-            thread::spawn(move || {
-                tx4.send(nega_par(cp, nb_cap_white, nb_cap_black, depth, alpha_mut, beta, player, spos4)).unwrap();
-            });
 
-            let score1 = rx1.recv().unwrap();
-            let score2 = rx1.recv().unwrap();
-            let score3 = rx1.recv().unwrap();
-            let score4 = rx1.recv().unwrap();
+            let score = rx.recv().unwrap();
 
-            if let Some(posc) = score1 {
+            if let Some(posc) = score {
                 if posc.1 > to_find.1 {
                     to_find = posc;
                 }
             }
-            if let Some(posc) = score2 {
-                if posc.1 > to_find.1 {
-                    to_find = posc;
-                }
-            }
-            if let Some(posc) = score3 {
-                if posc.1 > to_find.1 {
-                    to_find = posc;
-                }
-            }
-            if let Some(posc) = score4 {
-                if posc.1 > to_find.1 {
-                    to_find = posc;
-                }
-            }
+
+            let txcp = mpsc::Sender::clone(&tx);
+            thread::spawn(move || {
+                txcp.send(nega_par(cp, nb_cap_white, nb_cap_black, depth, alpha_mut, beta, player, spos)).unwrap();
+            });
 
             alpha_mut = alpha_mut.max(to_find.1);
             if alpha_mut >= beta || to_find.1 > SCORE_BREAK {
                 break;
+            }
+        }
+
+        let score1 = rx.recv().unwrap();
+        let score2 = rx.recv().unwrap();
+        let score3 = rx.recv().unwrap();
+        let score4 = rx.recv().unwrap();
+
+        if let Some(posc) = score1 {
+            if posc.1 > to_find.1 {
+                to_find = posc;
+            }
+        }
+        if let Some(posc) = score2 {
+            if posc.1 > to_find.1 {
+                to_find = posc;
+            }
+        }
+        if let Some(posc) = score3 {
+            if posc.1 > to_find.1 {
+                to_find = posc;
+            }
+        }
+        if let Some(posc) = score4 {
+            if posc.1 > to_find.1 {
+                to_find = posc;
             }
         }
     } else {
