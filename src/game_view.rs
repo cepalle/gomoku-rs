@@ -452,7 +452,7 @@ fn scoring_ordoring(
         let cap_w = countcap(grd, p, Player::White) as i32;
         score += (cap_w) * SCORE_CAP;
 
-        if nb_cap_white + cap_w >= 10 || nb_cap_black + cap_b >= 10 {
+        if nb_cap_white + (cap_w as i16) >= 10 || nb_cap_black + (cap_b as i16) >= 10 {
             return SCORE_MAX;
         }
     }
