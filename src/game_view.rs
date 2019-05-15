@@ -41,8 +41,8 @@ const MEMO_MASK_BLACK: [[(i16, i8); LEN_MASK]; NB_MASK] = [
 
 const DEPTH: i16 = 6;
 const DEPTH_MALUS: i32 = 100;
-const LEN_MAX_LPOS: usize = 14;
-const DEPTH_MALUS_LEN_LPOS_MAX: usize = 2;
+const LEN_MAX_LPOS: usize = 16;
+const DEPTH_MALUS_LEN_LPOS_MAX: usize = 1;
 
 const SCORE_CAP: i32 = 200;
 const SCORE_ALIGN_1: i32 = 1;
@@ -430,7 +430,13 @@ fn check_align_local(grd: &[[i8; GRID_SIZE]; GRID_SIZE], XY { x, y }: XY<i16>, (
     (nba - 1) as i32
 }
 
-fn scoring_ordoring(grd: &[[i8; GRID_SIZE]; GRID_SIZE], p: XY<i16>, player: Player) -> i32 {
+fn scoring_ordoring(
+    grd: &[[i8; GRID_SIZE]; GRID_SIZE],
+    p: XY<i16>,
+    player: Player,
+    nb_cap_white: i16,
+    nb_cap_black: i16,
+) -> i32 {
     let mut score: i32 = 0;
 
     for i in 0..(NB_DIR / 2) {
@@ -441,8 +447,14 @@ fn scoring_ordoring(grd: &[[i8; GRID_SIZE]; GRID_SIZE], p: XY<i16>, player: Play
 
         score += nba_to_score(ab);
         score += nba_to_score(aw);
-        score += (countcap(grd, p, Player::Black) as i32) * SCORE_CAP;
-        score += (countcap(grd, p, Player::White) as i32) * SCORE_CAP;
+        let cap_b = countcap(grd, p, Player::Black) as i32;
+        score += (cap_b) * SCORE_CAP;
+        let cap_w = countcap(grd, p, Player::White) as i32;
+        score += (cap_w) * SCORE_CAP;
+
+        if nb_cap_white + cap_w >= 10 || nb_cap_black + cap_b >= 10 {
+            return SCORE_MAX;
+        }
     }
 
     let mut nb_v = 0;
@@ -633,7 +645,6 @@ fn nega_max(
         return (XY { x: 0, y: 0 }, scoring_end(grd, nb_cap_white, nb_cap_black, player));
     }
 
-
     let mut lpos_score: Vec<(XY<i16>, i32)> = {
         let mut valid = empty_pos(&grd);
         valid = del_dist_1(&valid);
@@ -642,7 +653,7 @@ fn nega_max(
 
         let mut lpos_score: Vec<(XY<i16>, i32)> = Vec::new();
         for p in lpos.iter() {
-            lpos_score.push((*p, scoring_ordoring(grd, *p, player)))
+            lpos_score.push((*p, scoring_ordoring(grd, *p, player, nb_cap_white, nb_cap_black)))
         }
         lpos_score.sort_by_key(|k| k.1);
         lpos_score.reverse();
