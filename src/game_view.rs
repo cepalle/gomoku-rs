@@ -41,8 +41,8 @@ const MEMO_MASK_BLACK: [[(i16, i8); LEN_MASK]; NB_MASK] = [
 
 const DEPTH: i16 = 6;
 const DEPTH_MALUS: i32 = 100;
-const LEN_MAX_LPOS: usize = 16;
-const DEPTH_MALUS_LEN_LPOS_MAX: usize = 1;
+const LEN_MAX_LPOS: usize = 24;
+const DEPTH_MALUS_LEN_LPOS_MAX: usize = 3;
 
 const SCORE_CAP: i32 = 200;
 const SCORE_ALIGN_1: i32 = 1;
